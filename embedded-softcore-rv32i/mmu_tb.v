@@ -216,7 +216,7 @@ module mmu_tb();
 	    dm_di_tb = i;
 	    dm_be_tb = 4'b1111;
 	    @(posedge clk_tb);
-	    $display("(TT) io_we = %b, io_addr = 0x%h, io_data_write(prev) = 0x%h",
+	    $display("(TT) io_we = %b, io_addr = 0x%h, io_data_write = 0x%h",
 		     io_we_tb, io_addr_tb, io_data_write_tb);
 	    #0;
 	 end
