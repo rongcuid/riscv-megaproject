@@ -127,3 +127,6 @@ $RECYCLE.BIN/
 # Swap Files #
 .*.kate-swp
 .swp.*
+
+tb_log/
+tb_out/
