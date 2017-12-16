@@ -35,11 +35,11 @@ module mmu(
    input wire [31:0] im_addr, dm_addr, dm_di;
    input wire [3:0]  dm_be;
    input wire 	     is_signed;
-   output reg [11:2] im_addr_out;
+   output wire [11:2] im_addr_out;
    input wire [31:0]  im_data, io_data_read;
    output reg [31:0] io_data_write, dm_do;
    reg [31:0] 	     dm_do_tmp;
-   output wire [31:0] im_do;
+   output reg [31:0] im_do;
    output reg [7:0]   io_addr;
    output reg 	     io_en, io_we;
 
@@ -49,12 +49,14 @@ module mmu(
    wire [31:0] 		    ram_do;
    reg [31:0] 		    ram_di;
    integer 		    chosen_device_tmp;
-   reg [1:0] 		    chosen_device_p;
+   reg [2:0] 		    chosen_device_p;
    reg [3:0] 		    dm_be_p;
    reg 			    is_signed_p;
+   reg [31:0] 		    io_data_read_tmp, io_data_read_p, io_data_write_tmp;
+   reg [7:0] 		    io_addr_tmp;
+   reg 			    io_en_tmp, io_we_tmp;
 
-      
-   assign im_do = im_data;
+   assign im_addr_out[11:2] = im_addr[11:2];
 
    BRAM_SSP  #(
        .DEPTH(WORD_DEPTH>>2), .DEPTH_LOG(WORD_DEPTH_LOG-2), .WIDTH(8)
@@ -95,13 +97,23 @@ module mmu(
       if (!resetb) begin
 	 chosen_device_p <= 2'bX;
 	 is_signed_p <= 1'bX;
-	 dm_be_p <= 4'bX;
+	 dm_be_p <= 4'b0;
+	 im_do <= 32'bX;
+	 io_data_write <= 32'bX;
+	 io_en <= 1'b0;
+	 io_we <= 1'b0;
+	 io_addr <= 8'bX;
       end
       else if (clk) begin
 	 // Notice the pipeline
 	 dm_be_p <= dm_be;
 	 chosen_device_p <= chosen_device_tmp;
 	 is_signed_p <= is_signed;
+	 im_do <= im_data;
+	 io_data_write <= io_data_write_tmp;
+	 io_en <= io_en_tmp;
+	 io_we <= io_we_tmp;
+	 io_addr <= io_addr_tmp;
       end
    end
 
@@ -110,17 +122,15 @@ module mmu(
       ram_addr_temp = dm_addr - 32'h10000000;
       io_addr_temp = dm_addr - 32'h80000000;
 
-      io_en = 1'b0;
-      io_we = 1'b0;
-      io_data_write = 32'bX;
-      im_addr_out = 10'bX;
+      io_en_tmp = 1'b0;
+      io_we_tmp = 1'b0;
+      io_data_write_tmp = 32'bX;
       ram_we = 1'b0;
       ram_addr = {WORD_DEPTH_LOG-1{1'bX}};
       ram_di = 32'bX;
       chosen_device_tmp = DEV_UNKN;
       if (dm_addr[31:12] == 20'b0) begin
    	 // 0x00000000 - 0x00000FFF
-   	 im_addr_out = im_addr[11:2];
    	 chosen_device_tmp = DEV_IM;
       end
       else if (dm_addr[31] == 1'b0 && dm_addr[30:28] != 3'b0) begin
@@ -132,10 +142,10 @@ module mmu(
       end
       else if (dm_addr[31:8] == 24'h800000) begin
    	 // 0x80000000 - 0x800000FF
-   	 io_addr = io_addr_temp[7:0];
-   	 io_en = 1'b1;
-   	 io_we = dm_we;
-   	 io_data_write = dm_di_shift;
+   	 io_addr_tmp = io_addr_temp[7:0];
+   	 io_en_tmp = 1'b1;
+   	 io_we_tmp = dm_we;
+   	 io_data_write_tmp = dm_di_shift;
    	 chosen_device_tmp = DEV_IO;
       end
    end // block: DM_ADDR_MAP
@@ -167,7 +177,6 @@ module mmu(
    end // block: DM_IN_SHIFT
    
    always @ (*) begin : DM_OUT_SHIFT
-      dm_do = 32'bX;
       case (chosen_device_p)
    	DEV_DM:
    	  dm_do_tmp = ram_do;
@@ -177,6 +186,7 @@ module mmu(
    	  dm_do_tmp = 32'bX;
       endcase // case (chosen_device_reg)
       // Byte enable
+      dm_do = 32'bX;
       if (dm_be_p == 4'b1111) begin
    	dm_do = dm_do_tmp;
       end
