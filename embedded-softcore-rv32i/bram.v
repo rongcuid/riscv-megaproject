@@ -20,9 +20,9 @@ module BRAM_SSP(
    reg [WIDTH-1:0] 	 do;
 
    always @ (posedge clk) begin
-      if (en) begin
-	 RAM[addr]   <= di;
-	 do <= di;
+      if (en & we) begin
+	    RAM[addr]   <= di;
+	    do <= di;
       end
       else
 	do <= RAM[addr];
