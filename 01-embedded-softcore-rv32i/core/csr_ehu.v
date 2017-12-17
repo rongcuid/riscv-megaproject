@@ -88,49 +88,49 @@ module csr_ehu
 	   if (really_read) data_out <= mscratch;
 	   if (really_write) mscratch <= operand;
 	   if (really_set) mscratch <= mscratch | operand;
-	   if (really_clear) mscratch <= ~mscratch & operand;
+	   if (really_clear) mscratch <= mscratch & ~operand;
 	end
 	`CSR_MEPC: begin
 	   if (really_read) data_out <= mepc;
 	   if (really_write) mepc <= operand;
 	   if (really_set) mepc <= mepc | operand;
-	   if (really_clear) mepc <= ~mepc & operand;
+	   if (really_clear) mepc <= mepc & ~operand;
 	end
 	`CSR_MCAUSE: begin
 	   if (really_read) data_out <= mcause;
 	   if (really_write) mcause <= operand;
 	   if (really_set) mcause <= mcause | operand;
-	   if (really_clear) mcause <= ~mcause & operand;
+	   if (really_clear) mcause <= mcause & ~operand;
 	end
 	`CSR_MTVAL: begin
 	   if (really_read) data_out <= mtval;
 	   if (really_write) mtval <= operand;
 	   if (really_set) mtval <= mtval | operand;
-	   if (really_clear) mtval <= ~mtval & operand;
+	   if (really_clear) mtval <= mtval & ~operand;
 	end
 	`CSR_MCYCLE: begin
 	   if (really_read) data_out <= mcycle[0+:32];
 	   if (really_write) mcycle[0+:32] <= operand;
 	   if (really_set) mcycle[0+:32] <= mcycle[0+:32] | operand;
-	   if (really_clear) mcycle[0+:32] <= ~mcycle[0+:32] & operand;
+	   if (really_clear) mcycle[0+:32] <= mcycle[0+:32] & ~operand;
 	end
 	`CSR_MINSTRET: begin
 	   if (really_read) data_out <= mcycle[0+:32];
 	   if (really_write) minstret[0+:32] <= operand;
 	   if (really_set) minstret[0+:32] <= minstret[0+:32] | operand;
-	   if (really_clear) minstret[0+:32] <= ~minstret[0+:32] & operand;
+	   if (really_clear) minstret[0+:32] <= minstret[0+:32] & ~operand;
 	end
 	`CSR_MCYCLEH: begin
 	   if (really_read) data_out <= mcycle[32+:32];
 	   if (really_write) mcycle[32+:32] <= operand;
 	   if (really_set) mcycle[32+:32] <= mcycle[32+:32] | operand;
-	   if (really_clear) mcycle[32+:32] <= ~mcycle[32+:32] & operand;
+	   if (really_clear) mcycle[32+:32] <= mcycle[32+:32] & ~operand;
 	end
 	`CSR_MINSTRETH: begin
 	   if (really_read) data_out <= mcycle[32+:32];
 	   if (really_write) minstreth[32+:32] <= operand;
 	   if (really_set) minstret[32+:32] <= minstret[32+:32] | operand;
-	   if (really_clear) minstret[32+:32] <= ~minstret[32+:32] & operand;
+	   if (really_clear) minstret[32+:32] <= minstret[32+:32] & ~operand;
 	end
 	default: begin
 	   if (src_dst[11:4] == 8'hB0 || 
