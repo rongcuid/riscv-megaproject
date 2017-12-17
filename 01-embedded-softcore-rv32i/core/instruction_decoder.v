@@ -3,9 +3,43 @@
  */
 module instruction_decoder
   (
+   // Inputs
    inst,
+   // Outputs
+   immediate,
+   alu_is_signed, aluop2_sel, alu_op,
+   pc_update, pc_imm, pc_mepc,
+   regwrite, jump, link, jr, br,
+   dm_be, dm_we, mem_signed_extend,
+   csr_read, csr_write, csr_set, csr_clear, csr_imm,
+   rs1, rs2, rd, funct3, funct7
+   // Exceptions
+   bug_invalid_instr_format_onehot,
+   exception_unsupported_category,
+   exception_illegal_instruction,
+   exception_instruction_misaligned,
+   exception_memory_misaligned
    );
    input wire [31:0] inst;
+   output [31:0]     immediate;
+   output 	     alu_is_signed;
+   output 	     aluop2_sel, alu_op;
+   output 	     pc_update, pc_imm, pc_mepc;
+   output 	     regwrite;
+   output 	     jump, link, jr;
+   output 	     br;
+   output [3:0]      dm_be;
+   output 	     dm_we;
+   output 	     mem_signed_extend;
+   output 	     csr_read, csr_write, csr_set, csr_clear, csr_imm;
+   output [4:0]      rs1, rs2, rd;
+   output [2:0]      funct3;
+   output [6:0]      funct7;
+   output 	     bug_invalid_instr_format_onehot;
+   output 	     exception_unsupported_category;
+   output 	     exception_illegal_instruction;
+   output 	     exception_instruction_misaligned;
+   output 	     exception_memory_misaligned;
 
    // Opcode Categories
    localparam
@@ -95,7 +129,7 @@ module instruction_decoder
    wire [6:0] funct7;
    assign funct3 = inst[14:12];
    assign funct7 = inst[31:25];
-   reg 	      alu_is_signed, pc_update, pc_imm, regwrite, jump, link, jr;
+   reg 	      alu_is_signed, pc_update, pc_imm, pc_mepc, regwrite, jump, link, jr;
    reg 	      br;
    reg [3:0]  dm_be;
    reg 	      dm_we;
