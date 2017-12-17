@@ -102,11 +102,11 @@ module core
    assign FD_aluout = FD_rs1_d + FD_imm;
 
    // Exceptions
-   wire        FD_exception;
-   assign FD_exception = FD_exception_unsupported_category |
-		         FD_exception_illegal_instruction |
-		         FD_exception_instruction_misaligned |
-		         FD_exception_memory_misaligned;
+   // wire        FD_exception;
+   // assign FD_exception = FD_exception_unsupported_category |
+   // 		         FD_exception_illegal_instruction |
+   // 		         FD_exception_instruction_misaligned |
+   // 		         FD_exception_memory_misaligned;
 
    // Internally Forwarding Register File
    reg [4:0] FD_a_rs1, FD_a_rs2, XB_a_rd;

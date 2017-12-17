@@ -14,6 +14,7 @@
  `define CSR_MARCHID 12'hF12
  `define CSR_MIMPID 12'hF13
  `define CSR_MHARTID 12'hF14
+ `define CSR_MSTATUS 12'h300
  `define CSR_MISA 12'h301
  `define CSR_MTVEC 12'h305
  `define CSR_MSCRATCH 12'h340
