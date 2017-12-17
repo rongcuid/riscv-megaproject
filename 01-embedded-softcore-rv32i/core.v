@@ -1,0 +1,6 @@
+/*
+ */
+module core
+  (
+   );
+endmodule // core
