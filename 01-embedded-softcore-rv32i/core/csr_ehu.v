@@ -7,21 +7,24 @@ module csr_ehu
    clk, resetb, XB_bubble,
    // Control
    read, write, set, clear, imm, a_rd,
-   // Exception
+   initiate_illinst, initiate_misaligned,
+   // Exception In
    FD_exception_unsupported_category,
    FD_exception_illegal_instruction,
    FD_exception_memory_misaligned,
    // Data
-   src_dst, d_rs1, uimm, pc_in, data_out
+   src_dst, d_rs1, uimm, FD_pc, XB_pc, data_out
    );
 `include "csrlist.vh"
    input wire read, write, set, clear, imm;
    input wire [4:0] a_rd;
    input wire [11:0] src_dst;
-   input wire [31:0] pc_in, d_rs1;
+   input wire [31:0] FD_pc, XB_pc, d_rs1;
    input wire [4:0]  uimm;
    output reg [31:0] data_out;
-   reg 		     XB_exception_machine_trap;
+   output reg 	     initiate_illinst, initiate_misaligned;
+
+   reg 		     XB_exception_illegal_instruction;
    reg [31:0] 	     mepc;
    reg [31:0] 	     mscratch, mcause, mtval;
    reg [63:0] 	     mcycle, minstret;
@@ -32,9 +35,24 @@ module csr_ehu
    		         FD_exception_illegal_instruction |
    		         FD_exception_instruction_misaligned |
    		         FD_exception_memory_misaligned;
-   assign XB_exception = XB_exception_machine_trap;
+   assign XB_exception = XB_exception_illegal_instruction;
    assign initiate_exception = XB_exception | FD_exception;
 
+   // Exception Handling Unit. XB exceptions have higher priority
+   always @ (*) begin : EXCEPTION_HANDLING_UNIT
+      initiate_illinst = 1'b0;
+      initiate_misaligned = 1'b0;
+      if (XB_exception_illegal_instruction ||
+	  FD_exception_illegal_instruction ||
+	  FD_exception_unsupported_category) begin
+	 initiate_illinst = 1'b1;
+      end
+      else if (FD_exception_instruction_misaligned ||
+	       FD_exception_memory_misaligned) begin
+	 initiate_misaligned = 1'b1;
+      end
+   end
+   
    wire [31:0] 	     operand;
    assign operand = imm ? {27'b0, uimm} : d_rs1;
 
@@ -52,16 +70,18 @@ module csr_ehu
 	 data_out <= 32'bX;
       end
       else if (clk) begin
-	 XB_exception_machine_trap = 1'b0;
+	 XB_exception_illegal_instruction = 1'b0;
 	 mcycle <= mcycle + 64'b1;
 	 if (!XB_bubble) begin
 	    // Instruction is committed when it is not a bubble
 	    minstret <= minstret + 64'b1;
 	 end
-	 if (initiate_exception) begin
-	    mepc <= pc_in;
+	 if (XB_exception) begin
+	    mepc <= XB_pc;
 	 end
-      end
+	 else if (FD_exception) begin
+	    mepc <= FD_pc;
+	 end
       case (src_dst)
 	`CSR_MVENDORID: begin
 	   if (really_read) data_out <= 32'b0;
@@ -74,7 +94,6 @@ module csr_ehu
 	end
 	`CSR_MHARTID: begin
 	   if (really_read) data_out <= 32'b0;
-	end
 	end
 	`CSR_MISA: begin
 	   // 32-bit, I
@@ -143,10 +162,11 @@ module csr_ehu
 	      data_out <= 32'b0;
 	   end
 	   else begin
-	      XB_exception_machine_trap = 1'b1;
+	      XB_exception_illegal_instruction = 1'b1;
 	   end // else: !if(src_dst[11:4] == 8'hB0 ||...
 	end // case: default
       endcase // case (src_dst)
+      end // if (clk)
    end // block: CSR_PIPELINE
-
+   
 endmodule // csrrf
