@@ -72,8 +72,8 @@ module core
    wire        FD_exception_illegal_instruction;
    wire        FD_exception_instruction_misaligned;
    wire        FD_exception_memory_misaligned;
-   assign dm_be = FD_dm_be;
-   assign dm_we = FD_dm_we;
+   assign dm_be = FD_bubble ? 4'b0 : FD_dm_be;
+   assign dm_we = FD_bubble ? 1'b0 : FD_dm_we;
    assign dm_is_signed = FD_dm_is_signed;
 
    instruction_decoder id
