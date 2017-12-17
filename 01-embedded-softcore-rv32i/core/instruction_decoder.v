@@ -39,13 +39,11 @@ module instruction_decoder
      RV128_1 = 		5'b11110;
 
    wire [6:0] 	     opcode;
-   assign opcode = instruction[6:0];
+   assign opcode = inst[6:0];
 
    // Instruction Formats
    reg [5:0] 		instr_IURJBS;
-   reg exception_unsupported_category;
    always @ (*) begin : INSTRUCTION_FORMAT
-      exception_unsupported_category = 1'b0;
       case (opcode[6:2])
 	// I-Types
 	OP_IMM: instr_IURJBS = 6'b100000;
@@ -65,10 +63,7 @@ module instruction_decoder
 	// S-Types
 	STORE: instr_IURJBS = 6'b000001;
 	// Unsupported
-	default: begin
-	   instr_IURJBS = 6'bX;
-	   exception_unsupported_category = 1'b1;
-	end
+	default: instr_IURJBS = 6'bX;
       endcase // case (opcode[6:2])
    end // block: INSTRUCTION_FORMAT
 
@@ -77,7 +72,13 @@ module instruction_decoder
    always @ (*) begin : IMMEDIATE_DECODE
       bug_invalid_instr_format_onehot = 1'b0;
       case (instr_IURJBS)
-	6'b100000: immediate = {{21{inst[31]}}, inst[30:20]};
+	6'b100000: begin : I_TYPE
+	   if (opcode[6:2] == OP_IMM && (funct3 == 3'b101 || funct3 == 3'b001))
+	     // SLLI, SRLI, SRAI
+	     immediate = {27'b0, inst[24:20]};
+	   else
+	     immediate = {{21{inst[31]}}, inst[30:20]};
+	end
 	6'b010000: immediate = {inst[31:12], 12'b0};
 	6'b001000: immediate = 32'bX;
 	6'b000100: immediate = {{12{inst[31]}}, inst[19:12], inst[20], inst[30:21], 1'b0};
@@ -88,6 +89,139 @@ module instruction_decoder
 	   bug_invalid_instr_format_onehot = 1'b1;
 	end
       endcase // case (instr_IURJBS)
+   end // block: IMMEDIATE_DECODE
+
+   wire [2:0] funct3;
+   wire [6:0] funct7;
+   assign funct3 = inst[14:12];
+   assign funct7 = inst[31:25];
+   reg 	      alu_is_signed, pc_update, regwrite;
+   reg [4:0]  rs1, rs2, rd;
+   reg exception_unsupported_category;
+   integer aluop2_sel, alu_op;
+   always @ (*) begin : CONTROL_SIG_GENERATOR
+      // Default register fields
+      rs1 = inst[19:15];
+      rs2 = inst[24:20];
+      rd  = inst[11:7];
+      // Default ALU selections
+      alu_is_signed = 1'b1;
+      aluop2_sel = `ALUOP2_UNKN;
+      alu_op = `ALU_UNKN;
+      // Default write actions
+      regwrite = 1'b0;
+      pc_update = 1'b0;
+      // Default no exception
+      exception_unsupported_category = 1'b0;
+      case (opcode[6:2])
+	OP_IMM: begin
+	   // Immediate operation
+	   regwrite = 1'b1;
+	   aluop2_sel = `ALUOP2_RS2;
+	   case (funct3)
+	     3'b000: begin : ADDI
+		alu_op = `ALU_ADD;
+	     end
+	     3'b001: begin : SLLI
+		alu_op = `ALU_SLL;
+	     end
+	     3'b010: begin : SLTI
+		alu_op = `ALU_SLT;
+	     end
+	     3'b011: begin : SLTIU
+		alu_op = `ALU_SLT;
+		alu_is_signed = 1'b0;
+	     end
+	     3'b100: begin : XORI
+		alu_op = `ALU_XOR;
+	     end
+	     3'b101: begin : SRLI_SRAI
+		if (inst[30]) begin : SRAI
+		   alu_op = `ALU_SRA;
+		end
+		else begin : SRLI
+		   alu_op = `ALU_SRL;
+		end
+	     end
+	     3'b110: begin : ORI
+		alu_op = `ALU_ORI;
+	     end
+	     3'b111: begin : ANDI
+		alu_op = `ALU_ANDI;
+	     end
+	   endcase // case (funct3)
+	end // case: OP_IMM
+	LUI: begin
+	   regwrite = 1'b1;
+	   // 0 + imm
+	   rs1 = 5'd0;
+	end
+	AUIPC: begin
+	   pc_update = 1'b1;
+	end
+	OP: begin
+	   regwrite = 1'b1;
+	   aluop2_sel = `ALUOP2_RS2;
+	   case (funct3)
+	     3'b000: begin : ADD_SUB
+		if (funct7[5]) begin : SUB
+		   alu_op = `ALU_SUB; 
+		end
+		else : begin : ADD
+		   alu_op = `ALU_ADD;
+		end
+	     end
+	     3'b001: begin : SLL
+		alu_op = `ALU_SLL;
+	     end
+	     3'b010: begin : SLT
+		alu_op = `ALU_SLT;
+	     end
+	     3'b011: begin : SLTU
+		alu_op = `ALU_SLT;
+		alu_is_signed = 1'b0;
+	     end
+	     3'b100: begin : XOR
+		alu_op = `ALU_XOR;
+	     end
+	     3'b101: begin : SRL_SRA
+		if (funct7[5]) begin : SRA
+		   alu_op = `ALU_SRA;
+		end
+		else begin : SRL
+		   alu_op = `ALU_SRL;
+		end
+	     end
+	     3'b110: begin : OR
+		alu_op = `ALU_OR;
+	     end
+	     3'b111: begin : AND
+		alu_op = `ALU_AND;
+	     end
+	   endcase // case (funct3)
+	end
+	JAL: begin
+	end
+	JALR: begin
+	end
+	BRANCH: begin
+	end
+	LOAD: begin
+	end
+	STORE: begin
+	end
+	MISC_MEM: begin
+	end
+	SYSTEM: begin
+	end
+	
+	default: begin
+	  exception_unsupported_category = 1'b1;
+	end
+      endcase // case (opcode[6:2])
+      // Lower two bits are always 11
+      if (opcode[1:0] != 2'b11)
+	exception_unsupported_category = 1'b1;
    end
    
 endmodule // instruction_decoder
