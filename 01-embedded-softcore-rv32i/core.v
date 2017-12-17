@@ -63,7 +63,7 @@ module core
    wire        FD_dm_we;
    wire        FD_mem_sign_extend;
    wire        FD_csr_read, FD_csr_write, FD_csr_set, FD_csr_clear, FD_csr_imm;
-   wire [4:0]  FD_rs1, FD_rs2, FD_rd;
+   wire [4:0]  FD_a_rs1, FD_a_rs2, FD_a_rd;
    wire [2:0]  FD_funct3;
    wire [6:0]  FD_funct7;
    wire        FD_bug_invalid_instr_format_onehot;
@@ -85,30 +85,24 @@ module core
       .mem_signed_extend(FD_mem_signed_extend),
       .csr_read(FD_csr_read), .csr_write(FD_csr_write),
       .csr_set(FD_csr_set), .csr_clear(FD_csr_clear), .csr_imm(FD_csr_imm),
-      .rs1(FD_rs1), .rs2(FD_rs2), .rd(FD_rd), 
+      .a_rs1(FD_a_rs1), .a_rs2(FD_a_rs2), .rd(FD_a_rd), 
       .funct3(FD_funct3), .funct7(FD_funct7),
       .bug_invalid_instr_format_onehot(FD_bug_invalid_instr_format_oneshot),
       .exception_illegal_instruction(FD_exception_illegal_instruction),
       .exception_instruction_misaligned(FD_exception_instruction_misaligned),
       .exception_memory_misaligned(FD_exception_memory_misaligned)
       );
-   
-   task Instruction_Decoder;
-      input [31:0] instr;
-      begin
-      end
-   endtask // Instruction_Decoder
-
-   // Exception Handling Unit
-   reg [31:0] 	 FD_MEPC;	// The Machine Exception PC pointer
-   reg [31:0] 	 FD_MCAUSE; 	// The Machine exception Cause register
-
-   task Exception_Handling_Unit;
-      begin
-      end
-   endtask // Exception_Handling_Unit
 
    // XB ALU
+   wire [31:0] FD_aluout;
+   assign FD_aluout = FD_rs1_d + FD_imm;
+
+   // Exceptions
+   wire        exception;
+   assign exception = exception_unsupported_category |
+		      exception_illegal_instruction |
+		      exception_instruction_misaligned |
+		      exception_memory_misaligned;
 
    // Internally Forwarding Register File
    reg [4:0] FD_a_rs1, FD_a_rs2, XB_a_rd;
@@ -121,6 +115,8 @@ module core
 	      .a_rd(XB_a_rd), .d_rd(XB_d_rd), .we_rd(XB_we_rd)
 	      );
 
+   wire       bubble;
+   assign bubble = exception;
    always @ (posedge clk, negedge resetb) begin : CORE_PIPELINE
       if (!resetb) begin
 	 // Initialize MMU Interface
@@ -129,8 +125,33 @@ module core
 	 dm_di <= 32'bX;
 	 dm_we <= 1'b0;
 	 dm_be <= 4'b0000;
+	 
+	 // Initialize stage registers with side effects
+	 XB_regwrite <= 1'b0;
+	 XB_csr_read <= 1'b0;
+	 XB_csr_write <= 1'b0;
+	 XB_csr_set <= 1'b0;
+	 XB_csr_clear <= 1'b0;
+	 
+	 // Initialize stage registers
+	 XB_d_rs1 <= 32'bX;
+	 XB_d_rs2 <= 32'bX;
+	 XB_a_rs1 <= 5'bX;
+	 XB_csr_imm <= 1'bX;
+	 XB_memread <= 1'bX;
       end
       else if (clk) begin
+	 // XB stage
+	 XB_d_rs1 <= FD_d_rs1;
+	 XB_d_rs2 <= FD_d_rs2;
+	 XB_a_rs1 <= FD_a_rs1;
+	 XB_regwrite <= FD_regwrite;
+	 XB_csr_read <= FD_csr_read;
+	 XB_csr_write <= FD_csr_write;
+	 XB_csr_set <= FD_csr_set;
+	 XB_csr_clear <= FD_csr_clear;
+	 XB_memread <= 
+
 	 // FD stage
 	 PC_Incrementer(FD_PC, im_addr);
       end

@@ -12,7 +12,7 @@ module instruction_decoder
    regwrite, jump, link, jr, br,
    dm_be, dm_we, mem_signed_extend,
    csr_read, csr_write, csr_set, csr_clear, csr_imm,
-   rs1, rs2, rd, funct3, funct7
+   a_rs1, a_rs2, a_rd, funct3, funct7
    // Exceptions
    bug_invalid_instr_format_onehot,
    exception_unsupported_category,
@@ -32,7 +32,7 @@ module instruction_decoder
    output 	     dm_we;
    output 	     mem_signed_extend;
    output 	     csr_read, csr_write, csr_set, csr_clear, csr_imm;
-   output [4:0]      rs1, rs2, rd;
+   output [4:0]      a_rs1, a_rs2, a_rd;
    output [2:0]      funct3;
    output [6:0]      funct7;
    output 	     bug_invalid_instr_format_onehot;
@@ -136,7 +136,7 @@ module instruction_decoder
    reg 	      mem_signed_extend;
    reg 	      csr_read, csr_write, csr_set, csr_clear, csr_imm;
 	      
-   reg [4:0]  rs1, rs2, rd;
+   reg [4:0]  a_rs1, a_rs2, a_rd;
    reg exception_unsupported_category;
    reg exception_illegal_instruction;
    reg exception_instruction_misaligned;
@@ -144,9 +144,9 @@ module instruction_decoder
    integer aluop2_sel, alu_op;
    always @ (*) begin : CONTROL_SIG_GENERATOR
       // Default register fields
-      rs1 = inst[19:15];
-      rs2 = inst[24:20];
-      rd  = inst[11:7];
+      a_rs1 = inst[19:15];
+      a_rs2 = inst[24:20];
+      a_rd  = inst[11:7];
       // Default ALU selections
       alu_is_signed = 1'b1;
       aluop2_sel = `ALUOP2_UNKN;
@@ -216,7 +216,7 @@ module instruction_decoder
 	LUI: begin
 	   regwrite = 1'b1;
 	   // 0 + imm
-	   rs1 = 5'd0;
+	   a_rs1 = 5'd0;
 	end
 	AUIPC: begin
 	   pc_update = 1'b1;
