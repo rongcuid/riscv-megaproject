@@ -10,7 +10,7 @@ module instruction_decoder
    alu_is_signed, aluop2_sel, alu_op,
    pc_update, pc_imm, pc_mepc,
    regwrite, jump, link, jr, br,
-   dm_be, dm_we, mem_signed_extend,
+   dm_be, dm_we, mem_is_signed,
    csr_read, csr_write, csr_set, csr_clear, csr_imm,
    a_rs1, a_rs2, a_rd, funct3, funct7
    // Exceptions
@@ -30,7 +30,7 @@ module instruction_decoder
    output 	     br;
    output [3:0]      dm_be;
    output 	     dm_we;
-   output 	     mem_signed_extend;
+   output 	     mem_is_signed;
    output 	     csr_read, csr_write, csr_set, csr_clear, csr_imm;
    output [4:0]      a_rs1, a_rs2, a_rd;
    output [2:0]      funct3;
@@ -133,7 +133,7 @@ module instruction_decoder
    reg 	      br;
    reg [3:0]  dm_be;
    reg 	      dm_we;
-   reg 	      mem_signed_extend;
+   reg 	      mem_is_signed;
    reg 	      csr_read, csr_write, csr_set, csr_clear, csr_imm;
 	      
    reg [4:0]  a_rs1, a_rs2, a_rd;
@@ -290,9 +290,9 @@ module instruction_decoder
 	   case (funct3)
 	     3'b000, 3'b100: begin : LB
 		if (funct3 == 3'b000)
-		  mem_signed_extend = 1'b1;
+		  mem_is_signed = 1'b1;
 		else
-		  mem_signed_extend = 1'b0;
+		  mem_is_signed = 1'b0;
 		case (immediate[1:0])
 		  2'b00: begin
 		     dm_be = 4'b0001;
@@ -310,9 +310,9 @@ module instruction_decoder
 	     end
 	     3'b001, 3'b101: begin : LH
 		if (funct3 == 3'b001)
-		  mem_signed_extend = 1'b1;
+		  mem_is_signed = 1'b1;
 		else
-		  mem_signed_extend = 1'b0;
+		  mem_is_signed = 1'b0;
 		if (immediate[0])
 		  exception_memory_misaligned = 1'b1;
 		else begin
