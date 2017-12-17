@@ -95,9 +95,11 @@ module instruction_decoder
    wire [6:0] funct7;
    assign funct3 = inst[14:12];
    assign funct7 = inst[31:25];
-   reg 	      alu_is_signed, pc_update, regwrite;
+   reg 	      alu_is_signed, pc_update, regwrite, jump, link, jr;
+   reg 	      br;
    reg [4:0]  rs1, rs2, rd;
    reg exception_unsupported_category;
+   reg exception_illegal_instruction;
    integer aluop2_sel, alu_op;
    always @ (*) begin : CONTROL_SIG_GENERATOR
       // Default register fields
@@ -111,8 +113,14 @@ module instruction_decoder
       // Default write actions
       regwrite = 1'b0;
       pc_update = 1'b0;
+      // Default branch actions
+      jump = 1'b0;
+      jr = 1'b0;
+      link = 1'b0;
+      br = 1'b0;
       // Default no exception
       exception_unsupported_category = 1'b0;
+      exception_illegal_instruction = 1'b0;
       case (opcode[6:2])
 	OP_IMM: begin
 	   // Immediate operation
@@ -201,10 +209,34 @@ module instruction_decoder
 	   endcase // case (funct3)
 	end
 	JAL: begin
+	   jump = 1'b1;
+	   link = 1'b1;
+	   regwrite = 1'b1;
 	end
 	JALR: begin
+	   jr = 1'b1;
+	   link = 1'b1;
+	   regwrite = 1'b1;
 	end
 	BRANCH: begin
+	   br = 1'b1;
+	   case (funct3)
+	     3'b000: begin : BEQ
+	     end
+	     3'b001: begin : BNE
+	     end
+	     3'b100: begin : BLT
+	     end
+	     3'b101: begin : BGE
+	     end
+	     3'b110: begin : BLTU
+	     end
+	     3'b111: begin : BGEU
+	     end
+	     default: begin : ILL
+		exception_illegal_instruction = 1'b1;
+	     end
+	   endcase // case (funct3)
 	end
 	LOAD: begin
 	end
