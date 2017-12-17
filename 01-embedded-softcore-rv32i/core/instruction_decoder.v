@@ -95,12 +95,13 @@ module instruction_decoder
    wire [6:0] funct7;
    assign funct3 = inst[14:12];
    assign funct7 = inst[31:25];
-   reg 	      alu_is_signed, pc_update, regwrite, jump, link, jr;
+   reg 	      alu_is_signed, pc_update, pc_imm, regwrite, jump, link, jr;
    reg 	      br;
    reg [3:0]  dm_be;
    reg 	      dm_we;
    reg 	      mem_signed_extend;
-   
+   reg 	      csr_read, csr_write, csr_set, csr_clear, csr_imm;
+	      
    reg [4:0]  rs1, rs2, rd;
    reg exception_unsupported_category;
    reg exception_illegal_instruction;
@@ -119,6 +120,8 @@ module instruction_decoder
       // Default write actions
       regwrite = 1'b0;
       pc_update = 1'b0;
+      pc_imm = 1'b0;
+      pc_mepc = 1'b0;
       // Default memory actions
       dm_be = 4'b0;
       dm_we = 1'b0;
@@ -127,6 +130,12 @@ module instruction_decoder
       jr = 1'b0;
       link = 1'b0;
       br = 1'b0;
+      // Default CSR actions
+      csr_read = 1'b0;
+      csr_write = 1'b0;
+      csr_set = 1'b0;
+      csr_clear = 1'b0;
+      csr_imm = 1'b0;
       // Default no exception
       exception_unsupported_category = 1'b0;
       exception_illegal_instruction = 1'b0;
@@ -177,6 +186,7 @@ module instruction_decoder
 	end
 	AUIPC: begin
 	   pc_update = 1'b1;
+	   pc_imm = 1'b1;
 	end
 	OP: begin
 	   regwrite = 1'b1;
@@ -289,10 +299,99 @@ module instruction_decoder
 	   endcase // case (funct3)
 	end
 	STORE: begin
+	   dm_we = 1'b1;
+	   case (funct3)
+	     3'b000: begin : SB
+		case (immediate[1:0])
+		  2'b00: begin
+		     dm_be = 4'b0001;
+		  end
+		  2'b01: begin
+		     dm_be = 4'b0010;
+		  end
+		  2'b10: begin
+		     dm_be = 4'b0100;
+		  end
+		  2'b11: begin
+		     dm_be = 4'b1000;
+		  end
+		endcase // case (immediate[1:0])
+	     end
+	     3'b001: begin : SH
+		if (immediate[0])
+		  exception_memory_misaligned = 1'b1;
+		else begin
+		   if (immediate[1])
+		     dm_be = 4'b1100;
+		   else
+		     dm_be = 4'b0011;
+		end
+	     end
+	     3'b010: begin : SW
+		dm_be = 4'b1111;
+		if (immediate[0] | immediate[1])
+		  exception_memory_misaligned = 1'b1;
+	     end
+	     default: begin : ILL
+		exception_illegal_instruction = 1'b1;
+	     end
+	   endcase // case (funct3)
 	end
 	MISC_MEM: begin
+	   // NOP since this core is in order commit
 	end
 	SYSTEM: begin
+	   case (funct3)
+	     3'b000: begin : ECALL_EBREAK_RET
+		case (funct7)
+		  7'b0: begin : ECALL_EBREAK_URET
+		     // Software trap
+		     exception_illegal_instruction = 1'b1;
+		  end
+		  7'b0001000: begin : SRET_WFI
+		     // Software trap
+		     exception_illegal_instruction = 1'b1;
+		  end
+		  7'b0011000: begin : MRET
+		     pc_update = 1'b1;
+		     pc_mepc = 1'b1;
+		  end
+		  default: begin : ILL
+		     exception_illegal_instruction = 1'b1;
+		  end
+		endcase // case (funct7)
+	     end
+	     3'b001: begin : CSRRW
+		csr_read = 1'b1;
+		csr_write = 1'b1;
+	     end
+	     3'b010: begin : CSRRS
+		csr_read = 1'b1;
+		csr_set = 1'b1;
+	     end
+	     3'b011: begin : CSRRC
+		csr_read = 1'b1;
+		csr_clear = 1'b1;
+	     end
+	     3'b101: begin : CSRRWI
+		csr_read = 1'b1;
+		csr_write = 1'b1;
+		csr_imm = 1'b1;
+	     end
+	     3'b110: begin : CSRRSI
+		csr_read = 1'b1;
+		csr_set = 1'b1;
+		csr_imm = 1'b1;
+	     end
+	     3'b111: begin : CSRRCI
+		csr_read = 1'b1;
+		csr_clear = 1'b1;
+		csr_imm = 1'b1;
+	     end
+	     default: begin : ILL
+		exception_illegal_instruction = 1'b1;
+	     end
+	   endcase // case (funct3)
 	end
 	
 	default: begin
