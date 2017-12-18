@@ -26,7 +26,8 @@ module core
    // MMU
    dm_we, im_addr, im_do, dm_addr, dm_di, dm_do, dm_be, dm_is_signed
    );
-   `include "core/aluop.vh"
+`include "core/aluop.vh"
+`include "core/exception_vector.vh"
    input wire clk, resetb;
 
    // Interface to MMU
@@ -42,28 +43,65 @@ module core
    
    
    // Instruction Decode
-   wire [31:0] FD_imm;
-   wire        FD_alu_is_signed, FD_aluop2_sel, FD_alu_op;
-   wire        FD_pc_update, FD_pc_imm, FD_pc_mepc;
-   wire        FD_regwrite;
-   wire        FD_jump, FD_link, FD_jr, FD_br;
-   wire [3:0]  FD_dm_be;
-   wire        FD_dm_we;
-   wire        FD_dm_is_signed;
-   wire        FD_csr_read, FD_csr_write, FD_csr_set, FD_csr_clear, FD_csr_imm;
-   wire [4:0]  FD_a_rs1, FD_a_rs2, FD_a_rd;
-   wire [2:0]  FD_funct3;
-   wire [6:0]  FD_funct7;
-   wire        FD_bug_invalid_instr_format_onehot;
-   wire        FD_exception_unsupported_category;
-   wire        FD_exception_illegal_instruction;
-   wire        FD_exception_instruction_misaligned;
-   wire        FD_exception_memory_misaligned;
+   wire [31:0] 	     FD_imm;
+   wire 	     FD_alu_is_signed;
+   wire [31:0] 	     FD_aluop2_sel, FD_alu_op;
+   wire 	     FD_pc_update, FD_pc_imm, FD_pc_mepc;
+   wire 	     FD_regwrite;
+   wire 	     FD_jump, FD_link, FD_jr, FD_br;
+   wire [3:0] 	     FD_dm_be;
+   wire 	     FD_dm_we;
+   wire 	     FD_dm_is_signed;
+   wire 	     FD_csr_read, FD_csr_write, FD_csr_set, FD_csr_clear, FD_csr_imm;
+   wire [4:0] 	     FD_a_rs1, FD_a_rs2, FD_a_rd;
+   wire [2:0] 	     FD_funct3;
+   wire [6:0] 	     FD_funct7;
+   wire 	     FD_bug_invalid_instr_format_onehot;
+   wire 	     FD_exception_unsupported_category;
+   wire 	     FD_exception_illegal_instruction;
+   reg 		     FD_exception_instruction_misaligned;
+   wire 	     FD_exception_memory_misaligned;
+
+   // Program Counter
+   wire 	     FD_initiate_illinst, FD_initiate_misaligned;
+   reg [31:0] 	     FD_PC, nextPC;
+
+   // FD ALU
+   wire [31:0] FD_aluout;
+
+   // Internally Forwarding Register File
+   reg [4:0]   XB_a_rd;
+   reg [31:0]  XB_d_rd;
+   wire [31:0]  FD_d_rs1, FD_d_rs2;
+
+   // XB Stage registers
+   reg [31:0]  XB_d_rs1, XB_d_rs2, XB_imm;
+   reg [4:0]   XB_a_rs1;
+   reg 	       XB_regwrite;
+   reg 	       XB_memtoreg;
+   reg 	       XB_alu_is_signed;
+   reg [31:0]  XB_aluop2_sel, XB_alu_op;
+   reg 	       XB_FD_exception_unsupported_category;
+   reg 	       XB_FD_exception_illegal_instruction;
+   reg 	       XB_FD_exception_instruction_misaligned;
+   reg 	       XB_FD_exception_memory_misaligned;
+   reg [31:0]  XB_PC;
+   wire        FD_bubble;
+   reg 	       XB_bubble;
+
+   // XB ALU
+   reg [31:0]  XB_aluop1, XB_aluop2, XB_aluout;
+
+   // CSR Register file and Exception Handling Unit
+   wire [31:0] XB_csr_out;
+   wire        XB_csr_read, XB_csr_write, XB_csr_set, XB_csr_clear, XB_csr_imm;
+   wire [31:0] CSR_mepc;
+
    assign dm_be = FD_bubble ? 4'b0 : FD_dm_be;
    assign dm_we = FD_bubble ? 1'b0 : FD_dm_we;
    assign dm_is_signed = FD_dm_is_signed;
 
-   instruction_decoder id
+   instruction_decoder inst_dec
      (
       .inst(im_do),
       .immediate(FD_imm),
@@ -76,46 +114,65 @@ module core
       .mem_is_signed(FD_dm_is_signed),
       .csr_read(FD_csr_read), .csr_write(FD_csr_write),
       .csr_set(FD_csr_set), .csr_clear(FD_csr_clear), .csr_imm(FD_csr_imm),
-      .a_rs1(FD_a_rs1), .a_rs2(FD_a_rs2), .rd(FD_a_rd), 
+      .a_rs1(FD_a_rs1), .a_rs2(FD_a_rs2), .a_rd(FD_a_rd), 
       .funct3(FD_funct3), .funct7(FD_funct7),
-      .bug_invalid_instr_format_onehot(FD_bug_invalid_instr_format_oneshot),
+      .bug_invalid_instr_format_onehot(FD_bug_invalid_instr_format_onehot),
       .exception_illegal_instruction(FD_exception_illegal_instruction),
-      .exception_instruction_misaligned(FD_exception_instruction_misaligned),
       .exception_memory_misaligned(FD_exception_memory_misaligned)
       );
 
-   // Program Counter
-   wire 	     FD_initiate_illinst, FD_initiate_misaligned;
-   reg [31:0] 	     FD_PC, nextPC;
    always @ (posedge clk, negedge resetb) begin : PROGRAM_COUNTER
       if (!resetb) begin
 	 FD_PC <= 32'hFFFFFFFC;
       end
       else if (clk) begin
+	 nextPC = FD_PC + 32'h4;
 	 if (FD_initiate_illinst) begin
 	    nextPC = `VEC_ILLEGAL_INST;
 	 end
 	 else if (FD_initiate_misaligned) begin
 	    nextPC = `VEC_MISALIGNED;
 	 end
-	 else if (pc_update) begin
-	    if (pc_mepc) begin
+	 else if (FD_pc_update) begin : WRITE_PC
+	    if (FD_pc_mepc) begin : MRET
 	       nextPC = CSR_mepc;
 	    end
-	    else if (pc_imm) begin
+	    else if (FD_pc_imm) begin : AUIPC
 	       nextPC = FD_imm + FD_PC;
 	    end
 	 end
-	 else if (br) begin
+	 else if (FD_br) begin : BRANCH
 	    case (FD_funct3)
 	      3'b000: begin : BEQ
+		 if (FD_d_rs1 == FD_d_rs2) nextPC = FD_imm + FD_PC;
+	      end
+	      3'b001: begin : BNE
+		 if (FD_d_rs1 != FD_d_rs2) nextPC = FD_imm + FD_PC;
+	      end
+	      3'b100: begin : BLT
+		 if ($signed(FD_d_rs1) < $signed(FD_d_rs2)) 
+		   nextPC = FD_imm + FD_PC;
+	      end
+	      3'b101: begin : BGE
+		 if ($signed(FD_d_rs1) >= $signed(FD_d_rs2)) 
+		   nextPC = FD_imm + FD_PC;
+	      end
+	      3'b110: begin : BLTU
+		 if ($unsigned(FD_d_rs1) < $unsigned(FD_d_rs2)) 
+		   nextPC = FD_imm + FD_PC;
+	      end
+	      3'b111: begin : BGEU
+		 if ($unsigned(FD_d_rs1) >= $unsigned(FD_d_rs2)) 
+		   nextPC = FD_imm + FD_PC;
 	      end
 	    endcase
+	 end // block: BRANCH
+	 else if (FD_jump) begin : JAL
+	    nextPC = FD_PC + FD_imm;
 	 end
-	 else begin
-	    nextPC = FD_PC + 32'h4;
-	 end // else: !if(pc_update)
-	 
+	 else if (FD_jr) begin : JR
+	    nextPC = FD_aluout;
+	 end
 	 FD_exception_instruction_misaligned = 1'b0;
 	 if (nextPC[1:0] != 2'b00) begin
 	    FD_exception_instruction_misaligned = 1'b1;
@@ -125,13 +182,8 @@ module core
       end // if (clk)
    end
 
-   // FD ALU
-   wire [31:0] FD_aluout;
-   assign FD_aluout = FD_rs1_d + FD_imm;
+   assign FD_aluout = FD_d_rs1 + FD_imm;
 
-   // Internally Forwarding Register File
-   reg [4:0] FD_a_rs1, FD_a_rs2, XB_a_rd;
-   reg [31:0] FD_d_rs1, FD_d_rs2;
    regfile RF(
 	      .clk(clk), .resetb(resetb),
 	      .a_rs1(FD_a_rs1), .d_rs1(FD_d_rs1),
@@ -139,15 +191,6 @@ module core
 	      .a_rd(XB_a_rd), .d_rd(XB_d_rd), .we_rd(XB_regwrite)
 	      );
 
-   // XB Stage registers
-   reg [31:0] XB_d_rs1, XB_d_rs2, XB_imm;
-   reg [4:0]  XB_a_rs1;
-   reg 	      XB_regwrite, XB_csr_read, XB_csr_write, XB_csr_set, XB_csr_clear;
-   reg 	      XB_memtoreg;
-   reg 	      XB_alu_is_signed;
-
-   // XB ALU
-   reg [31:0] XB_aluop1, XB_aluop2, XB_aluout;
 
    always @ (*) begin : XB_ALU
       XB_aluop1 = XB_d_rs1;
@@ -192,13 +235,36 @@ module core
 	`ALU_SRA: begin
 	   XB_aluout = $signed(XB_aluop1) >>> XB_imm[4:0];
 	end
+	`ALU_SUB: begin
+	   XB_aluout = XB_aluop1 - XB_aluop2;
+	end
 	default:
 	  XB_aluout = 32'bX;
       endcase // case (XB_alu_op)
    end // block: XB_ALU
 
-   // CSR Register file
-   reg [31:0] XB_csr_out;
+   
+   assign XB_csr_read = FD_bubble ? 1'b0 : FD_csr_read;
+   assign XB_csr_write = FD_bubble ? 1'b0 : FD_csr_write;
+   assign XB_csr_set = FD_bubble ? 1'b0 : FD_csr_set;
+   assign XB_csr_clear = FD_bubble ? 1'b0 : FD_csr_clear;
+   assign XB_csr_imm = FD_csr_imm;
+   
+   csr_ehu CSR_EHU0
+     (
+      .clk(clk), .resetb(resetb), .XB_bubble(XB_bubble),
+      .read(XB_csr_read), .write(XB_csr_write),
+      .set(XB_csr_set), .clear(XB_csr_clear),
+      .imm(XB_csr_imm), .a_rd(FD_a_rd),
+      .initiate_illinst(FD_initiate_illinst),
+      .initiate_misaligned(FD_initiate_misaligned),
+      .XB_FD_exception_unsupported_category(FD_exception_unsupported_category),
+      .XB_FD_exception_illegal_instruction(FD_exception_illegal_instruction),
+      .XB_FD_exception_instruction_misaligned(FD_exception_instruction_misaligned),
+      .XB_FD_exception_memory_misaligned(FD_exception_memory_misaligned),
+      .src_dst(FD_imm[11:0]), .d_rs1(FD_d_rs1), .uimm(FD_a_rs1),
+      .FD_pc(FD_PC), .XB_pc(XB_PC), .data_out(XB_csr_out), .csr_mepc(CSR_mepc)
+      );
 
    // Writeback path select
    always @ (*) begin : XB_Writeback_Path
@@ -209,65 +275,81 @@ module core
       else if (XB_csr_read) begin
 	 XB_d_rd = XB_csr_out;
       end
+      else begin
+	 XB_d_rd = XB_aluout;
+      end
    end
 
-   // FD ALU
-   wire [31:0] FD_aluout;
    assign FD_aluout = FD_d_rs1 + FD_imm;
    
    // MMU Interface
    assign dm_addr = FD_aluout;
    assign dm_di = FD_d_rs2;
    
-   wire       FD_bubble;
-   assign FD_bubble = FD_exception;
+   assign FD_bubble = FD_initiate_illinst | FD_initiate_misaligned;
    always @ (posedge clk, negedge resetb) begin : CORE_PIPELINE
       if (!resetb) begin
 	 // Initialize stage registers with side effects
 	 XB_regwrite <= 1'b0;
-	 XB_csr_read <= 1'b0;
-	 XB_csr_write <= 1'b0;
-	 XB_csr_set <= 1'b0;
-	 XB_csr_clear <= 1'b0;
-	 
+	 // XB_csr_read <= 1'b0;
+	 // XB_csr_write <= 1'b0;
+	 // XB_csr_set <= 1'b0;
+	 // XB_csr_clear <= 1'b0;
+	 XB_FD_exception_unsupported_category <= 1'b0;
+	 XB_FD_exception_illegal_instruction <= 1'b0;
+	 XB_FD_exception_instruction_misaligned <= 1'b0;
+	 XB_FD_exception_memory_misaligned <= 1'b0;
+	 XB_bubble <= 1'b1;
 	 // Initialize stage registers
+	 XB_PC <= 32'bX;
 	 XB_d_rs1 <= 32'bX;
 	 XB_d_rs2 <= 32'bX;
 	 XB_a_rs1 <= 5'bX;
 	 XB_a_rd <= 5'bX;
-	 XB_csr_imm <= 1'bX;
+	 // XB_csr_imm <= 1'bX;
 	 XB_memtoreg <= 1'bX;
 	 XB_alu_is_signed <= 1'bX;
       end
       else if (clk) begin
 	 // XB stage
 	 //// Operators
-	 XB_d_rs1 <= FD_d_rs1;
-	 XB_d_rs2 <= FD_d_rs2;
+	 if (!FD_link) begin
+	    XB_d_rs1 <= FD_d_rs1;
+	    XB_d_rs2 <= FD_d_rs2;
+	 end
+	 else begin
+	    XB_d_rs1 <= FD_PC;
+	    XB_d_rs2 <= 32'h4;
+	 end
 	 XB_imm <= FD_imm;
 	 XB_a_rs1 <= FD_a_rs1;
 	 XB_a_rd <= FD_a_rd;
 	 //// Pure signals
 	 XB_memtoreg <= FD_dm_be[3] | FD_dm_be[2] | FD_dm_be[1] | FD_dm_be[0];
-	 XB_mem_signed_extend <= FD_mem_signed_extend;
 	 XB_aluop2_sel <= FD_aluop2_sel;
 	 XB_alu_op <= FD_alu_op;
 	 XB_alu_is_signed <= FD_alu_is_signed;
+	 XB_PC <= FD_PC;
 	 //// Side effect signals
+	 XB_bubble <= FD_bubble;
 	 if (!FD_bubble) begin
 	    XB_regwrite <= FD_regwrite;
-	    XB_csr_read <= FD_csr_read;
-	    XB_csr_write <= FD_csr_write;
-	    XB_csr_set <= FD_csr_set;
-	    XB_csr_clear <= FD_csr_clear;
+	    XB_FD_exception_unsupported_category 
+	      <= FD_exception_unsupported_category;
+	    XB_FD_exception_illegal_instruction
+	      <= FD_exception_illegal_instruction;
+	    XB_FD_exception_instruction_misaligned
+	      <= FD_exception_instruction_misaligned;
+	    XB_FD_exception_memory_misaligned
+	      <= FD_exception_memory_misaligned;
 	 end
 	 else begin
 	    // A bubble has all side-effectful signals deactivated
 	    XB_regwrite <= 1'b0;
-	    XB_csr_read <= 1'b0;
-	    XB_csr_write <= 1'b0;
-	    XB_csr_set <= 1'b0;
-	    XB_csr_clear <= 1'b0;
+	    XB_FD_exception_unsupported_category <= 1'b0;
+	    XB_FD_exception_illegal_instruction <= 1'b0;
+	    XB_FD_exception_instruction_misaligned <= 1'b0;
+	    XB_FD_exception_memory_misaligned <= 1'b0;
 	 end // else: !if(!FD_bubble)
 
 	 // FD stage

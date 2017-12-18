@@ -14,5 +14,6 @@
  `define ALU_SLL 5
  `define ALU_SRL 6
  `define ALU_SRA 7
+ `define ALU_SUB 8
 
 `endif

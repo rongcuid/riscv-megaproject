@@ -12,18 +12,18 @@ module instruction_decoder
    regwrite, jump, link, jr, br,
    dm_be, dm_we, mem_is_signed,
    csr_read, csr_write, csr_set, csr_clear, csr_imm,
-   a_rs1, a_rs2, a_rd, funct3, funct7
+   a_rs1, a_rs2, a_rd, funct3, funct7,
    // Exceptions
    bug_invalid_instr_format_onehot,
    exception_unsupported_category,
    exception_illegal_instruction,
-   exception_instruction_misaligned,
    exception_memory_misaligned
    );
+   `include "core/aluop.vh"
    input wire [31:0] inst;
    output [31:0]     immediate;
    output 	     alu_is_signed;
-   output 	     aluop2_sel, alu_op;
+   output [31:0]     aluop2_sel, alu_op;
    output 	     pc_update, pc_imm, pc_mepc;
    output 	     regwrite;
    output 	     jump, link, jr;
@@ -38,7 +38,6 @@ module instruction_decoder
    output 	     bug_invalid_instr_format_onehot;
    output 	     exception_unsupported_category;
    output 	     exception_illegal_instruction;
-   output 	     exception_instruction_misaligned;
    output 	     exception_memory_misaligned;
 
    // Opcode Categories
@@ -139,7 +138,6 @@ module instruction_decoder
    reg [4:0]  a_rs1, a_rs2, a_rd;
    reg exception_unsupported_category;
    reg exception_illegal_instruction;
-   reg exception_instruction_misaligned;
    reg exception_memory_misaligned;
    integer aluop2_sel, alu_op;
    always @ (*) begin : CONTROL_SIG_GENERATOR
@@ -173,7 +171,6 @@ module instruction_decoder
       // Default no exception
       exception_unsupported_category = 1'b0;
       exception_illegal_instruction = 1'b0;
-      exception_instruction_misaligned = 1'b0;
       exception_memory_misaligned = 1'b0;
       case (opcode[6:2])
 	OP_IMM: begin
@@ -206,10 +203,10 @@ module instruction_decoder
 		end
 	     end
 	     3'b110: begin : ORI
-		alu_op = `ALU_ORI;
+		alu_op = `ALU_OR;
 	     end
 	     3'b111: begin : ANDI
-		alu_op = `ALU_ANDI;
+		alu_op = `ALU_AND;
 	     end
 	   endcase // case (funct3)
 	end // case: OP_IMM
@@ -230,7 +227,7 @@ module instruction_decoder
 		if (funct7[5]) begin : SUB
 		   alu_op = `ALU_SUB; 
 		end
-		else : begin : ADD
+		else begin : ADD
 		   alu_op = `ALU_ADD;
 		end
 	     end
@@ -267,13 +264,15 @@ module instruction_decoder
 	   jump = 1'b1;
 	   link = 1'b1;
 	   regwrite = 1'b1;
-	   if (imm[1] != 1'b0)
-	     exception_instruction_misaligned = 1'b0;
+	   alu_op = `ALU_ADD;
+	   aluop2_sel = `ALUOP2_RS2;
 	end
 	JALR: begin
 	   jr = 1'b1;
 	   link = 1'b1;
 	   regwrite = 1'b1;
+	   alu_op = `ALU_ADD;
+	   aluop2_sel = `ALUOP2_RS2;
 	end
 	BRANCH: begin
 	   br = 1'b1;
@@ -281,7 +280,7 @@ module instruction_decoder
 	     3'b000,3'b001,3'b100,3'b101,3'b110,3'b111: begin
 		// Do nothing here. Let comparator choose for itself
 	     end
-	     default: begin : ILL
+	     default: begin
 		exception_illegal_instruction = 1'b1;
 	     end
 	   endcase // case (funct3)
@@ -327,7 +326,7 @@ module instruction_decoder
 		if (immediate[0] | immediate[1])
 		  exception_memory_misaligned = 1'b1;
 	     end
-	     default: begin : ILL
+	     default: begin 
 		exception_illegal_instruction = 1'b1;
 	     end
 	   endcase // case (funct3)
@@ -366,7 +365,7 @@ module instruction_decoder
 		if (immediate[0] | immediate[1])
 		  exception_memory_misaligned = 1'b1;
 	     end
-	     default: begin : ILL
+	     default: begin 
 		exception_illegal_instruction = 1'b1;
 	     end
 	   endcase // case (funct3)
@@ -390,7 +389,7 @@ module instruction_decoder
 		     pc_update = 1'b1;
 		     pc_mepc = 1'b1;
 		  end
-		  default: begin : ILL
+		  default: begin 
 		     exception_illegal_instruction = 1'b1;
 		  end
 		endcase // case (funct7)
@@ -422,7 +421,7 @@ module instruction_decoder
 		csr_clear = 1'b1;
 		csr_imm = 1'b1;
 	     end
-	     default: begin : ILL
+	     default: begin
 		exception_illegal_instruction = 1'b1;
 	     end
 	   endcase // case (funct3)

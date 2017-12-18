@@ -11,19 +11,25 @@ module csr_ehu
    // Exception In
    XB_FD_exception_unsupported_category,
    XB_FD_exception_illegal_instruction,
+   XB_FD_exception_instruction_misaligned,
    XB_FD_exception_memory_misaligned,
    // Data
-   src_dst, d_rs1, uimm, FD_pc, XB_pc, data_out
+   src_dst, d_rs1, uimm, FD_pc, XB_pc, data_out, csr_mepc
    );
-`include "csrlist.vh"
+`include "core/csrlist.vh"
+   input wire clk, resetb, XB_bubble;
    input wire read, write, set, clear, imm;
    input wire [4:0] a_rd;
    input wire [11:0] src_dst;
    input wire [31:0] FD_pc, XB_pc, d_rs1;
    input wire [4:0]  uimm;
+   input wire	     XB_FD_exception_unsupported_category;
+   input wire	     XB_FD_exception_illegal_instruction;
+   input wire	     XB_FD_exception_instruction_misaligned;
+   input wire	     XB_FD_exception_memory_misaligned;
    output reg [31:0] data_out;
    output reg 	     initiate_illinst, initiate_misaligned;
-
+   output wire [31:0] csr_mepc;
    reg 		     XB_exception_illegal_instruction;
    reg [31:0] 	     mepc;
    reg [31:0] 	     mscratch, mcause, mtval;
@@ -33,10 +39,11 @@ module csr_ehu
    wire 	     FD_exception, XB_exception;
    assign FD_exception = XB_FD_exception_unsupported_category |
    		         XB_FD_exception_illegal_instruction |
-   		         FD_exception_instruction_misaligned |
+   		         XB_FD_exception_instruction_misaligned |
    		         XB_FD_exception_memory_misaligned;
    assign XB_exception = XB_exception_illegal_instruction;
    assign initiate_exception = XB_exception | FD_exception;
+   assign csr_mepc = mepc;
 
    // Exception Handling Unit. XB exceptions have higher priority
    always @ (*) begin : EXCEPTION_HANDLING_UNIT
@@ -147,7 +154,7 @@ module csr_ehu
 	end
 	`CSR_MINSTRETH: begin
 	   if (really_read) data_out <= mcycle[32+:32];
-	   if (really_write) minstreth[32+:32] <= operand;
+	   if (really_write) minstret[32+:32] <= operand;
 	   if (really_set) minstret[32+:32] <= minstret[32+:32] | operand;
 	   if (really_clear) minstret[32+:32] <= minstret[32+:32] & ~operand;
 	end
@@ -157,7 +164,7 @@ module csr_ehu
 	       src_dst[11:4] == 8'hB8 ||
 	       src_dst[11:4] == 8'hB9 ||
 	       src_dst[11:4] == 8'h32 ||
-	       src_dst[11:4] == 8'h33 ||
+	       src_dst[11:4] == 8'h33
 	       ) begin : PERFORMANCE_MONITORS
 	      data_out <= 32'b0;
 	   end
