@@ -9,9 +9,9 @@ module csr_ehu
    read, write, set, clear, imm, a_rd,
    initiate_illinst, initiate_misaligned,
    // Exception In
-   FD_exception_unsupported_category,
-   FD_exception_illegal_instruction,
-   FD_exception_memory_misaligned,
+   XB_FD_exception_unsupported_category,
+   XB_FD_exception_illegal_instruction,
+   XB_FD_exception_memory_misaligned,
    // Data
    src_dst, d_rs1, uimm, FD_pc, XB_pc, data_out
    );
@@ -31,10 +31,10 @@ module csr_ehu
 
    wire 	     initiate_exception;
    wire 	     FD_exception, XB_exception;
-   assign FD_exception = FD_exception_unsupported_category |
-   		         FD_exception_illegal_instruction |
+   assign FD_exception = XB_FD_exception_unsupported_category |
+   		         XB_FD_exception_illegal_instruction |
    		         FD_exception_instruction_misaligned |
-   		         FD_exception_memory_misaligned;
+   		         XB_FD_exception_memory_misaligned;
    assign XB_exception = XB_exception_illegal_instruction;
    assign initiate_exception = XB_exception | FD_exception;
 
@@ -43,12 +43,12 @@ module csr_ehu
       initiate_illinst = 1'b0;
       initiate_misaligned = 1'b0;
       if (XB_exception_illegal_instruction ||
-	  FD_exception_illegal_instruction ||
-	  FD_exception_unsupported_category) begin
+	  XB_FD_exception_illegal_instruction ||
+	  XB_FD_exception_unsupported_category) begin
 	 initiate_illinst = 1'b1;
       end
-      else if (FD_exception_instruction_misaligned ||
-	       FD_exception_memory_misaligned) begin
+      else if (XB_FD_exception_instruction_misaligned ||
+	       XB_FD_exception_memory_misaligned) begin
 	 initiate_misaligned = 1'b1;
       end
    end

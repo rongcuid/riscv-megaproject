@@ -37,23 +37,10 @@ module core
 
    wire 	     dm_we, dm_is_signed;
    wire [31:0] 	     dm_addr, dm_di;
-   wire [31:0] 	     im_addr;
+   reg [31:0] 	     im_addr;
    wire [3:0] 	     dm_be;
-
-   // Program Counter
-   reg [31:0] 	     FD_PC;
    
-   task PC_Incrementer;
-      input [31:0] PC;
-      output [31:0] im_a;
-      reg [31:0] next_PC;
-      begin
-	 next_PC = PC + 32'd4;
-	 PC <= next_PC;
-	 im_a = next_PC;
-      end
-   endtask // PC_Incrementer
-
+   
    // Instruction Decode
    wire [31:0] FD_imm;
    wire        FD_alu_is_signed, FD_aluop2_sel, FD_alu_op;
@@ -97,16 +84,50 @@ module core
       .exception_memory_misaligned(FD_exception_memory_misaligned)
       );
 
-   // XB ALU
+   // Program Counter
+   wire 	     FD_initiate_illinst, FD_initiate_misaligned;
+   reg [31:0] 	     FD_PC, nextPC;
+   always @ (posedge clk, negedge resetb) begin : PROGRAM_COUNTER
+      if (!resetb) begin
+	 FD_PC <= 32'hFFFFFFFC;
+      end
+      else if (clk) begin
+	 if (FD_initiate_illinst) begin
+	    nextPC = `VEC_ILLEGAL_INST;
+	 end
+	 else if (FD_initiate_misaligned) begin
+	    nextPC = `VEC_MISALIGNED;
+	 end
+	 else if (pc_update) begin
+	    if (pc_mepc) begin
+	       nextPC = CSR_mepc;
+	    end
+	    else if (pc_imm) begin
+	       nextPC = FD_imm + FD_PC;
+	    end
+	 end
+	 else if (br) begin
+	    case (FD_funct3)
+	      3'b000: begin : BEQ
+	      end
+	    endcase
+	 end
+	 else begin
+	    nextPC = FD_PC + 32'h4;
+	 end // else: !if(pc_update)
+	 
+	 FD_exception_instruction_misaligned = 1'b0;
+	 if (nextPC[1:0] != 2'b00) begin
+	    FD_exception_instruction_misaligned = 1'b1;
+	 end
+	 FD_PC <= nextPC;
+	 im_addr = nextPC;
+      end // if (clk)
+   end
+
+   // FD ALU
    wire [31:0] FD_aluout;
    assign FD_aluout = FD_rs1_d + FD_imm;
-
-   // Exceptions
-   // wire        FD_exception;
-   // assign FD_exception = FD_exception_unsupported_category |
-   // 		         FD_exception_illegal_instruction |
-   // 		         FD_exception_instruction_misaligned |
-   // 		         FD_exception_memory_misaligned;
 
    // Internally Forwarding Register File
    reg [4:0] FD_a_rs1, FD_a_rs2, XB_a_rd;
@@ -250,7 +271,6 @@ module core
 	 end // else: !if(!FD_bubble)
 
 	 // FD stage
-	 PC_Incrementer(FD_PC, im_addr);
       end
    end
    
