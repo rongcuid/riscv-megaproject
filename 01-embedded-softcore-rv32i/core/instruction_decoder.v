@@ -17,7 +17,8 @@ module instruction_decoder
    bug_invalid_instr_format_onehot,
    exception_unsupported_category,
    exception_illegal_instruction,
-   exception_memory_misaligned
+   exception_load_misaligned,
+   exception_store_misaligned
    );
    `include "core/aluop.vh"
    input wire [31:0] inst;
@@ -38,7 +39,8 @@ module instruction_decoder
    output 	     bug_invalid_instr_format_onehot;
    output 	     exception_unsupported_category;
    output 	     exception_illegal_instruction;
-   output 	     exception_memory_misaligned;
+   output 	     exception_load_misaligned;
+   output 	     exception_store_misaligned;
 
    // Opcode Categories
    localparam
@@ -138,7 +140,8 @@ module instruction_decoder
    reg [4:0]  a_rs1, a_rs2, a_rd;
    reg exception_unsupported_category;
    reg exception_illegal_instruction;
-   reg exception_memory_misaligned;
+   reg exception_load_misaligned;
+   reg exception_store_misaligned;
    integer aluop2_sel, alu_op;
    always @ (*) begin : CONTROL_SIG_GENERATOR
       // Default register fields
@@ -171,7 +174,8 @@ module instruction_decoder
       // Default no exception
       exception_unsupported_category = 1'b0;
       exception_illegal_instruction = 1'b0;
-      exception_memory_misaligned = 1'b0;
+      exception_load_misaligned = 1'b0;
+      exception_store_misaligned = 1'b0;
       case (opcode[6:2])
 	OP_IMM: begin
 	   // Immediate operation
@@ -313,7 +317,7 @@ module instruction_decoder
 		else
 		  mem_is_signed = 1'b0;
 		if (immediate[0])
-		  exception_memory_misaligned = 1'b1;
+		  exception_load_misaligned = 1'b1;
 		else begin
 		   if (immediate[1])
 		     dm_be = 4'b1100;
@@ -324,7 +328,7 @@ module instruction_decoder
 	     3'b010: begin : LW
 		dm_be = 4'b1111;
 		if (immediate[0] | immediate[1])
-		  exception_memory_misaligned = 1'b1;
+		  exception_load_misaligned = 1'b1;
 	     end
 	     default: begin 
 		exception_illegal_instruction = 1'b1;
@@ -352,7 +356,7 @@ module instruction_decoder
 	     end
 	     3'b001: begin : SH
 		if (immediate[0])
-		  exception_memory_misaligned = 1'b1;
+		  exception_store_misaligned = 1'b1;
 		else begin
 		   if (immediate[1])
 		     dm_be = 4'b1100;
@@ -363,7 +367,7 @@ module instruction_decoder
 	     3'b010: begin : SW
 		dm_be = 4'b1111;
 		if (immediate[0] | immediate[1])
-		  exception_memory_misaligned = 1'b1;
+		  exception_store_misaligned = 1'b1;
 	     end
 	     default: begin 
 		exception_illegal_instruction = 1'b1;

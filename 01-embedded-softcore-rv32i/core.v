@@ -60,7 +60,8 @@ module core
    wire 	     FD_exception_unsupported_category;
    wire 	     FD_exception_illegal_instruction;
    reg 		     FD_exception_instruction_misaligned;
-   wire 	     FD_exception_memory_misaligned;
+   wire 	     FD_exception_load_misaligned;
+   wire 	     FD_exception_store_misaligned;
 
    // Program Counter
    wire 	     FD_initiate_illinst, FD_initiate_misaligned;
@@ -84,7 +85,8 @@ module core
    reg 	       XB_FD_exception_unsupported_category;
    reg 	       XB_FD_exception_illegal_instruction;
    reg 	       XB_FD_exception_instruction_misaligned;
-   reg 	       XB_FD_exception_memory_misaligned;
+   reg 	       XB_FD_exception_load_misaligned;
+   reg 	       XB_FD_exception_store_misaligned;
    reg [31:0]  XB_PC;
    wire        FD_bubble;
    reg 	       XB_bubble;
@@ -118,7 +120,8 @@ module core
       .funct3(FD_funct3), .funct7(FD_funct7),
       .bug_invalid_instr_format_onehot(FD_bug_invalid_instr_format_onehot),
       .exception_illegal_instruction(FD_exception_illegal_instruction),
-      .exception_memory_misaligned(FD_exception_memory_misaligned)
+      .exception_load_misaligned(FD_exception_load_misaligned),
+      .exception_store_misaligned(FD_exception_store_misaligned)
       );
 
    always @ (posedge clk, negedge resetb) begin : PROGRAM_COUNTER
@@ -261,7 +264,8 @@ module core
       .XB_FD_exception_unsupported_category(FD_exception_unsupported_category),
       .XB_FD_exception_illegal_instruction(FD_exception_illegal_instruction),
       .XB_FD_exception_instruction_misaligned(FD_exception_instruction_misaligned),
-      .XB_FD_exception_memory_misaligned(FD_exception_memory_misaligned),
+      .XB_FD_exception_load_misaligned(XB_FD_exception_load_misaligned),
+      .XB_FD_exception_store_misaligned(XB_FD_exception_store_misaligned),
       .src_dst(FD_imm[11:0]), .d_rs1(FD_d_rs1), .uimm(FD_a_rs1),
       .FD_pc(FD_PC), .XB_pc(XB_PC), .data_out(XB_csr_out), .csr_mepc(CSR_mepc)
       );
@@ -298,7 +302,8 @@ module core
 	 XB_FD_exception_unsupported_category <= 1'b0;
 	 XB_FD_exception_illegal_instruction <= 1'b0;
 	 XB_FD_exception_instruction_misaligned <= 1'b0;
-	 XB_FD_exception_memory_misaligned <= 1'b0;
+	 XB_FD_exception_load_misaligned <= 1'b0;
+	 XB_FD_exception_store_misaligned <= 1'b0;
 	 XB_bubble <= 1'b1;
 	 // Initialize stage registers
 	 XB_PC <= 32'bX;
@@ -340,8 +345,10 @@ module core
 	      <= FD_exception_illegal_instruction;
 	    XB_FD_exception_instruction_misaligned
 	      <= FD_exception_instruction_misaligned;
-	    XB_FD_exception_memory_misaligned
-	      <= FD_exception_memory_misaligned;
+	    XB_FD_exception_load_misaligned
+	      <= FD_exception_load_misaligned;
+	    XB_FD_exception_store_misaligned
+	      <= FD_exception_store_misaligned;
 	 end
 	 else begin
 	    // A bubble has all side-effectful signals deactivated
@@ -349,7 +356,8 @@ module core
 	    XB_FD_exception_unsupported_category <= 1'b0;
 	    XB_FD_exception_illegal_instruction <= 1'b0;
 	    XB_FD_exception_instruction_misaligned <= 1'b0;
-	    XB_FD_exception_memory_misaligned <= 1'b0;
+	    XB_FD_exception_load_misaligned <= 1'b0;
+	    XB_FD_exception_store_misaligned <= 1'b0;
 	 end // else: !if(!FD_bubble)
 
 	 // FD stage

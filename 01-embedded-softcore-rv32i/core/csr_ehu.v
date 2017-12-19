@@ -12,7 +12,8 @@ module csr_ehu
    XB_FD_exception_unsupported_category,
    XB_FD_exception_illegal_instruction,
    XB_FD_exception_instruction_misaligned,
-   XB_FD_exception_memory_misaligned,
+   XB_FD_exception_load_misaligned,
+   XB_FD_exception_store_misaligned,
    // Data
    src_dst, d_rs1, uimm, FD_pc, XB_pc, data_out, csr_mepc
    );
@@ -26,7 +27,8 @@ module csr_ehu
    input wire	     XB_FD_exception_unsupported_category;
    input wire	     XB_FD_exception_illegal_instruction;
    input wire	     XB_FD_exception_instruction_misaligned;
-   input wire	     XB_FD_exception_memory_misaligned;
+   input wire	     XB_FD_exception_load_misaligned;
+   input wire	     XB_FD_exception_store_misaligned;
    output reg [31:0] data_out;
    output reg 	     initiate_illinst, initiate_misaligned;
    output wire [31:0] csr_mepc;
@@ -40,7 +42,8 @@ module csr_ehu
    assign FD_exception = XB_FD_exception_unsupported_category |
    		         XB_FD_exception_illegal_instruction |
    		         XB_FD_exception_instruction_misaligned |
-   		         XB_FD_exception_memory_misaligned;
+   		         XB_FD_exception_load_misaligned |
+   		         XB_FD_exception_store_misaligned;
    assign XB_exception = XB_exception_illegal_instruction;
    assign initiate_exception = XB_exception | FD_exception;
    assign csr_mepc = mepc;
@@ -49,13 +52,14 @@ module csr_ehu
    always @ (*) begin : EXCEPTION_HANDLING_UNIT
       initiate_illinst = 1'b0;
       initiate_misaligned = 1'b0;
-      if (XB_exception_illegal_instruction ||
-	  XB_FD_exception_illegal_instruction ||
+      if (XB_exception_illegal_instruction |
+	  XB_FD_exception_illegal_instruction |
 	  XB_FD_exception_unsupported_category) begin
 	 initiate_illinst = 1'b1;
       end
-      else if (XB_FD_exception_instruction_misaligned ||
-	       XB_FD_exception_memory_misaligned) begin
+      else if (XB_FD_exception_instruction_misaligned |
+	       XB_FD_exception_load_misaligned |
+	       XB_FD_exception_store_misaligned) begin
 	 initiate_misaligned = 1'b1;
       end
    end
@@ -85,6 +89,19 @@ module csr_ehu
 	 end
 	 if (XB_exception) begin
 	    mepc <= XB_pc;
+	    if (XB_FD_exception_instruction_misaligned) begin
+	       mcause <= 32'd0;
+	    end
+	    else if (XB_FD_exception_illegal_instruction |
+		     XB_FD_exception_unsupported_category) begin
+	       mcause <= 32'd2;
+	    end
+	    else if (XB_FD_exception_load_misaligned) begin
+	       mcause <= 32'd4;
+	    end
+	    else if (XB_FD_exception_store_misaligned) begin
+	       mcause <= 32'd6;
+	    end
 	 end
 	 else if (FD_exception) begin
 	    mepc <= FD_pc;
