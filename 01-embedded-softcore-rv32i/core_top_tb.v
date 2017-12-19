@@ -85,14 +85,18 @@ module core_tb();
 	 $display("(TT) --------------------------------------------------");
 	 $display("(TT) Test 0: NOP and JAL Test ");
 	 $display("(TT) 1. Waveform must be inspected");
-	 $display("(TT) 2. On reset, PC at 0x0, then jumps to 0xC.");
-	 $display("(TT) 3. Then, increments at steps of 0x4.");
-	 $display("(TT) 4. Then, jumps to 0xC after 0x20.");
+	 $display("(TT) 2. Before reset, PC is at 0xFFFFFFFC.");
+	 $display("(TT) 3. Reset PC is 0x0, which then jumps to 0xC.");
+	 $display("(TT) 4. Then, increments at steps of 0x4.");
+	 $display("(TT) 5. Then, jumps to 0xC after 0x20.");
 	 $display("(TT) --------------------------------------------------");
 
 	 load_program("tb_out/00-nop.bin");
 	 hard_reset();
-	 for (i=0; i<10; i=i+1) @(posedge clk_tb);
+	 for (i=0; i<16; i=i+1) begin
+	    $display("(TT) FD_PC=0x%h", UUT.FD_PC);
+	    @(posedge clk_tb);
+	 end
       end	 
    endtask //
    
