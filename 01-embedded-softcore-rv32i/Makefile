@@ -15,7 +15,7 @@ compile_mmu_tb: bram.v mmu.v mmu_tb.v
 run_mmu_tb: compile_mmu_tb
 	vvp tb_out/mmu_tb -lxt2
 
-compile_core_tb: bram.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v core_top.v
+compile_core_tb: bram.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v core_top.v core_top_tb.v
 	echo "(MM) Compiling CPU Top testbench"
 	iverilog -Wall -o tb_out/cpu_top_tb $^
 
