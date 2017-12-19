@@ -52,14 +52,14 @@ module csr_ehu
    always @ (*) begin : EXCEPTION_HANDLING_UNIT
       initiate_illinst = 1'b0;
       initiate_misaligned = 1'b0;
-      if (XB_exception_illegal_instruction |
+      if (~XB_bubble & (XB_exception_illegal_instruction |
 	  XB_FD_exception_illegal_instruction |
-	  XB_FD_exception_unsupported_category) begin
+	  XB_FD_exception_unsupported_category)) begin
 	 initiate_illinst = 1'b1;
       end
-      else if (XB_FD_exception_instruction_misaligned |
+      else if (~XB_bubble & (XB_FD_exception_instruction_misaligned |
 	       XB_FD_exception_load_misaligned |
-	       XB_FD_exception_store_misaligned) begin
+	       XB_FD_exception_store_misaligned)) begin
 	 initiate_misaligned = 1'b1;
       end
    end

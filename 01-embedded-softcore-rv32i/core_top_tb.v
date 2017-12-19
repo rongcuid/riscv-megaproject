@@ -13,11 +13,17 @@ module core_tb();
    wire [7:0]  io_addr_tb;
    wire        io_en_tb, io_we_tb;
 
-   reg [31:0]  instruction_memory_tb [0:4095];
+   reg [31:0]  instruction_memory_tb [0:1023];
+
    reg [31:0]  io_memory_tb [0:255];
 
    integer     i;
-   
+
+   reg [32767:0] im_rom_flattened;
+   always @ (*) begin
+      for (i=0; i<1024; i=i+1) 
+	im_rom_flattened[i*4+:32] = instruction_memory_tb[i];
+   end
    always begin : CLK_GENERATOR
       #5 clk_tb = 1'b0;
       #5 clk_tb = 1'b1;
@@ -33,11 +39,18 @@ module core_tb();
    task load_program;
       input [2047:0] path;
       integer 	     fid, tmp;
+      reg [7:0]      bytes [0:4095];
+      integer 	     i,j;
       begin
 	 // Initialize the instruction memory and io memory for testing
 	 fid = $fopen(path, "rb");
-	 tmp = $fread(instruction_memory_tb, fid);
+	 tmp = $fread(bytes, fid);
 	 $fclose(fid);
+	 for (i=0; i<1024; i=i+1) begin
+	    for (j=0; j<4; j=j+1) begin
+	       instruction_memory_tb[i][8*j+:8] = bytes[i*4+j];
+	    end
+	 end
       end
    endtask // load_program
 
@@ -54,15 +67,16 @@ module core_tb();
 	 $display("(TT) Test 1: NOP listing ");
 	 $display("(TT) --------------------------------------------------");
 
-	 load_program("tmp/00-nop.bin");
+	 load_program("tb_out/00-nop.bin");
 	 hard_reset();
+	 for (i=0; i<10; i=i+1) @(posedge clk_tb);
       end	 
    endtask //
    
    assign im_data_tb = instruction_memory_tb[im_addr_out_tb[11:2]];
    assign io_data_read_tb = io_memory_tb[io_addr_tb[7:2]];
    
-   mmu UUT(.clk(clk_tb), .resetb(resetb_tb), .dm_we(dm_we_tb), 
+   mmu MMU0(.clk(clk_tb), .resetb(resetb_tb), .dm_we(dm_we_tb), 
 	   .im_addr(im_addr_tb), .im_do(im_do_tb),
 	   .dm_addr(dm_addr_tb), .dm_di(dm_di_tb),
 	   .dm_do(dm_do_tb), .dm_be(dm_be_tb),
@@ -72,7 +86,7 @@ module core_tb();
 	   .io_data_read(io_data_read_tb), .io_data_write(io_data_write_tb)
 	   );
 
-   core CPU0
+   core UUT
      (
       .clk(clk_tb), .resetb(resetb_tb),
       .dm_we(dm_we_tb), .im_addr(im_addr_tb),
