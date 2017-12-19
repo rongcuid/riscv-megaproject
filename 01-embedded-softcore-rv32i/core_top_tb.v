@@ -2,6 +2,7 @@
 `default_nettype none
 
 module core_tb();
+   `include "core/opcode.vh"
    reg clk_tb, resetb_tb;
    wire dm_we_tb;
    wire [31:0] im_addr_tb, dm_addr_tb, dm_di_tb;
@@ -24,6 +25,24 @@ module core_tb();
       for (i=0; i<1024; i=i+1) 
 	im_rom_flattened[i*4+:32] = instruction_memory_tb[i];
    end
+
+   reg [255:0] FD_inst_category;
+   always @ (*) begin : Disassembly
+      case (UUT.inst_dec.opcode[6:2])
+	`LOAD: FD_inst_category = "LOAD    ";
+	`OP_IMM: FD_inst_category = "OP-IMM  ";
+	`AUIPC: FD_inst_category = "AUIPC   ";
+	`STORE: FD_inst_category = "STORE   ";
+	`OP: FD_inst_category = "OP      ";
+	`LUI:  FD_inst_category = "LUI     ";
+	`BRANCH: FD_inst_category = "BRANCH  ";
+	`JALR: FD_inst_category = "JALR    ";
+	`JAL: FD_inst_category = "JAL     ";
+	`SYSTEM: FD_inst_category = "SYSTEM  ";
+	default: FD_inst_category = "ILLEGAL ";
+      endcase
+   end
+
    always begin : CLK_GENERATOR
       #5 clk_tb = 1'b0;
       #5 clk_tb = 1'b1;
@@ -59,12 +78,16 @@ module core_tb();
       end
    endtask
 
-   // Test 1: NOP
-   task run_test1;
+   // Test 0: NOP
+   task run_test0;
       integer 	    i;
       begin
 	 $display("(TT) --------------------------------------------------");
-	 $display("(TT) Test 1: NOP listing ");
+	 $display("(TT) Test 0: NOP and JAL Test ");
+	 $display("(TT) 1. Waveform must be inspected");
+	 $display("(TT) 2. On reset, PC at 0x0, then jumps to 0xC.");
+	 $display("(TT) 3. Then, increments at steps of 0x4.");
+	 $display("(TT) 4. Then, jumps to 0xC after 0x20.");
 	 $display("(TT) --------------------------------------------------");
 
 	 load_program("tb_out/00-nop.bin");
@@ -106,7 +129,7 @@ module core_tb();
 
 	@(posedge clk_tb);
 
-	run_test1();
+	run_test0();
 
 	$finish;
 	

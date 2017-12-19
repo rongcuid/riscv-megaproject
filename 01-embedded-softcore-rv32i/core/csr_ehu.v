@@ -186,7 +186,8 @@ module csr_ehu
 	      data_out <= 32'b0;
 	   end
 	   else begin
-	      XB_exception_illegal_instruction = 1'b1;
+	      if (~XB_bubble & (read|write|set|clear))
+		XB_exception_illegal_instruction = 1'b1;
 	   end // else: !if(src_dst[11:4] == 8'hB0 ||...
 	end // case: default
       endcase // case (src_dst)

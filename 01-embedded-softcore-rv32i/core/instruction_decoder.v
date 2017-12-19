@@ -20,7 +20,8 @@ module instruction_decoder
    exception_load_misaligned,
    exception_store_misaligned
    );
-   `include "core/aluop.vh"
+`include "core/aluop.vh"
+`include "core/opcode.vh"
    input wire [31:0] inst;
    output [31:0]     immediate;
    output 	     alu_is_signed;
@@ -42,61 +43,30 @@ module instruction_decoder
    output 	     exception_load_misaligned;
    output 	     exception_store_misaligned;
 
-   // Opcode Categories
-   localparam
-     LOAD = 		5'b00000,
-     LOAD_FP = 		5'b00001,
-     CUST_0 = 		5'b00010,
-     MISC_MEM = 	5'b00011,
-     OP_IMM = 		5'b00100,
-     AUIPC = 		5'b00101,
-     OP_IMM_32 = 	5'b00110,
-     STORE = 		5'b01000,
-     STORE_FP = 	5'b01001,
-     CUST_1 = 		5'b01010,
-     AMO = 		5'b01011,
-     OP = 		5'b01100,
-     LUI = 		5'b01101,
-     OP_32 = 		5'b01110,
-     MADD = 		5'b10000,
-     MSUB = 		5'b10001,
-     NMSUB = 		5'b10010,
-     NMADD = 		5'b10011,
-     OP_FP = 		5'b10100,
-     RES_0 = 		5'b10101,
-     RV128_0 = 		5'b10110,
-     BRANCH = 		5'b11000,
-     JALR = 		5'b11001,
-     RES_1 = 		5'b11010,
-     JAL = 		5'b11011,
-     SYSTEM = 		5'b11100,
-     RES_2 = 		5'b11101,
-     RV128_1 = 		5'b11110;
-
    wire [6:0] 	     opcode;
    assign opcode = inst[6:0];
 
    // Instruction Formats
-   reg [5:0] 		instr_IURJBS;
+   reg [5:0] 	     instr_IURJBS;
    always @ (*) begin : INSTRUCTION_FORMAT
       case (opcode[6:2])
 	// I-Types
-	OP_IMM: instr_IURJBS = 6'b100000;
-	JALR: instr_IURJBS = 6'b100000;
-	LOAD: instr_IURJBS = 6'b100000;
-	MISC_MEM: instr_IURJBS = 6'b100000;
-	OP_IMM: instr_IURJBS = 6'b100000;
+	`OP_IMM: instr_IURJBS = 6'b100000;
+	`JALR: instr_IURJBS = 6'b100000;
+	`LOAD: instr_IURJBS = 6'b100000;
+	`MISC_MEM: instr_IURJBS = 6'b100000;
+	`OP_IMM: instr_IURJBS = 6'b100000;
 	// U-Types
-	LUI: instr_IURJBS = 6'b010000;
-	AUIPC: instr_IURJBS = 6'b010000;
+	`LUI: instr_IURJBS = 6'b010000;
+	`AUIPC: instr_IURJBS = 6'b010000;
 	// R-Types
-	OP: instr_IURJBS = 6'b001000;
+	`OP: instr_IURJBS = 6'b001000;
 	// J-Types
-	JAL: instr_IURJBS = 6'b000100;
+	`JAL: instr_IURJBS = 6'b000100;
 	// B-Types
-	BRANCH: instr_IURJBS = 6'b000010;
+	`BRANCH: instr_IURJBS = 6'b000010;
 	// S-Types
-	STORE: instr_IURJBS = 6'b000001;
+	`STORE: instr_IURJBS = 6'b000001;
 	// Unsupported
 	default: instr_IURJBS = 6'bX;
       endcase // case (opcode[6:2])
@@ -108,7 +78,7 @@ module instruction_decoder
       bug_invalid_instr_format_onehot = 1'b0;
       case (instr_IURJBS)
 	6'b100000: begin : I_TYPE
-	   if (opcode[6:2] == OP_IMM && (funct3 == 3'b101 || funct3 == 3'b001))
+	   if (opcode[6:2] == `OP_IMM && (funct3 == 3'b101 || funct3 == 3'b001))
 	     // SLLI, SRLI, SRAI
 	     immediate = {27'b0, inst[24:20]};
 	   else
@@ -136,13 +106,13 @@ module instruction_decoder
    reg 	      dm_we;
    reg 	      mem_is_signed;
    reg 	      csr_read, csr_write, csr_set, csr_clear, csr_imm;
-	      
+   
    reg [4:0]  a_rs1, a_rs2, a_rd;
-   reg exception_unsupported_category;
-   reg exception_illegal_instruction;
-   reg exception_load_misaligned;
-   reg exception_store_misaligned;
-   integer aluop2_sel, alu_op;
+   reg 	      exception_unsupported_category;
+   reg 	      exception_illegal_instruction;
+   reg 	      exception_load_misaligned;
+   reg 	      exception_store_misaligned;
+   integer    aluop2_sel, alu_op;
    always @ (*) begin : CONTROL_SIG_GENERATOR
       // Default register fields
       a_rs1 = inst[19:15];
@@ -177,7 +147,7 @@ module instruction_decoder
       exception_load_misaligned = 1'b0;
       exception_store_misaligned = 1'b0;
       case (opcode[6:2])
-	OP_IMM: begin
+	`OP_IMM: begin
 	   // Immediate operation
 	   regwrite = 1'b1;
 	   aluop2_sel = `ALUOP2_RS2;
@@ -214,16 +184,16 @@ module instruction_decoder
 	     end
 	   endcase // case (funct3)
 	end // case: OP_IMM
-	LUI: begin
+	`LUI: begin
 	   regwrite = 1'b1;
 	   // 0 + imm
 	   a_rs1 = 5'd0;
 	end
-	AUIPC: begin
+	`AUIPC: begin
 	   pc_update = 1'b1;
 	   pc_imm = 1'b1;
 	end
-	OP: begin
+	`OP: begin
 	   regwrite = 1'b1;
 	   aluop2_sel = `ALUOP2_RS2;
 	   case (funct3)
@@ -264,21 +234,21 @@ module instruction_decoder
 	     end
 	   endcase // case (funct3)
 	end
-	JAL: begin
+	`JAL: begin
 	   jump = 1'b1;
 	   link = 1'b1;
 	   regwrite = 1'b1;
 	   alu_op = `ALU_ADD;
 	   aluop2_sel = `ALUOP2_RS2;
 	end
-	JALR: begin
+	`JALR: begin
 	   jr = 1'b1;
 	   link = 1'b1;
 	   regwrite = 1'b1;
 	   alu_op = `ALU_ADD;
 	   aluop2_sel = `ALUOP2_RS2;
 	end
-	BRANCH: begin
+	`BRANCH: begin
 	   br = 1'b1;
 	   case (funct3)
 	     3'b000,3'b001,3'b100,3'b101,3'b110,3'b111: begin
@@ -289,7 +259,7 @@ module instruction_decoder
 	     end
 	   endcase // case (funct3)
 	end
-	LOAD: begin
+	`LOAD: begin
 	   case (funct3)
 	     3'b000, 3'b100: begin : LB
 		if (funct3 == 3'b000)
@@ -335,7 +305,7 @@ module instruction_decoder
 	     end
 	   endcase // case (funct3)
 	end
-	STORE: begin
+	`STORE: begin
 	   dm_we = 1'b1;
 	   case (funct3)
 	     3'b000: begin : SB
@@ -374,10 +344,10 @@ module instruction_decoder
 	     end
 	   endcase // case (funct3)
 	end
-	MISC_MEM: begin
+	`MISC_MEM: begin
 	   // NOP since this core is in order commit
 	end
-	SYSTEM: begin
+	`SYSTEM: begin
 	   case (funct3)
 	     3'b000: begin : ECALL_EBREAK_RET
 		case (funct7)
@@ -432,12 +402,14 @@ module instruction_decoder
 	end
 	
 	default: begin
-	  exception_unsupported_category = 1'b1;
+	   exception_unsupported_category = 1'b1;
 	end
       endcase // case (opcode[6:2])
+      
       // Lower two bits are always 11
       if (opcode[1:0] != 2'b11)
 	exception_unsupported_category = 1'b1;
+      
    end
    
 endmodule // instruction_decoder

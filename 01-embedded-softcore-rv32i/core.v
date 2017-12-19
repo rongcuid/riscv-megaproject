@@ -124,12 +124,10 @@ module core
       .exception_store_misaligned(FD_exception_store_misaligned)
       );
 
-   always @ (posedge clk, negedge resetb) begin : PROGRAM_COUNTER
-      if (!resetb) begin
-	 FD_PC <= 32'hFFFFFFFC;
-      end
-      else if (clk) begin
-	 nextPC = FD_PC + 32'h4;
+   always @ (*) begin : PC_UPDATE
+      nextPC = FD_PC + 32'h4;
+      // So that the first address is 0x0 on reset
+      if (resetb) begin
 	 if (FD_initiate_illinst) begin
 	    nextPC = `VEC_ILLEGAL_INST;
 	 end
@@ -180,8 +178,17 @@ module core
 	 if (nextPC[1:0] != 2'b00) begin
 	    FD_exception_instruction_misaligned = 1'b1;
 	 end
+      end // if (resetb)
+      
+      im_addr = nextPC;
+   end
+
+   always @ (posedge clk, negedge resetb) begin : PROGRAM_COUNTER
+      if (!resetb) begin
+	 FD_PC <= 32'hFFFFFFFC;
+      end
+      else if (clk) begin
 	 FD_PC <= nextPC;
-	 im_addr = nextPC;
       end // if (clk)
    end
 
@@ -261,9 +268,9 @@ module core
       .imm(XB_csr_imm), .a_rd(FD_a_rd),
       .initiate_illinst(FD_initiate_illinst),
       .initiate_misaligned(FD_initiate_misaligned),
-      .XB_FD_exception_unsupported_category(FD_exception_unsupported_category),
-      .XB_FD_exception_illegal_instruction(FD_exception_illegal_instruction),
-      .XB_FD_exception_instruction_misaligned(FD_exception_instruction_misaligned),
+      .XB_FD_exception_unsupported_category(XB_FD_exception_unsupported_category),
+      .XB_FD_exception_illegal_instruction(XB_FD_exception_illegal_instruction),
+      .XB_FD_exception_instruction_misaligned(XB_FD_exception_instruction_misaligned),
       .XB_FD_exception_load_misaligned(XB_FD_exception_load_misaligned),
       .XB_FD_exception_store_misaligned(XB_FD_exception_store_misaligned),
       .src_dst(FD_imm[11:0]), .d_rs1(FD_d_rs1), .uimm(FD_a_rs1),
