@@ -83,7 +83,7 @@ module core_tb();
       integer 	    i;
       begin
 	 $display("(TT) --------------------------------------------------");
-	 $display("(TT) Test 0: NOP and JAL Test ");
+	 $display("(TT) Test 0: NOP and J Test ");
 	 $display("(TT) 1. Waveform must be inspected");
 	 $display("(TT) 2. Before reset, PC is at 0xFFFFFFFC.");
 	 $display("(TT) 3. Reset PC is 0x0, which then jumps to 0xC.");
