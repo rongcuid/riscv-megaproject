@@ -7,8 +7,8 @@ module instruction_decoder
    inst,
    // Outputs
    immediate,
-   alu_is_signed, aluop2_sel, alu_op,
-   pc_update, pc_imm, pc_mepc,
+   alu_is_signed, aluop1_sel, aluop2_sel, alu_op,
+   pc_update, pc_mepc,
    regwrite, jump, link, jr, br,
    dm_be, dm_we, mem_is_signed,
    csr_read, csr_write, csr_set, csr_clear, csr_imm,
@@ -25,8 +25,8 @@ module instruction_decoder
    input wire [31:0] inst;
    output [31:0]     immediate;
    output 	     alu_is_signed;
-   output [31:0]     aluop2_sel, alu_op;
-   output 	     pc_update, pc_imm, pc_mepc;
+   output [31:0]     aluop1_sel, aluop2_sel, alu_op;
+   output 	     pc_update, pc_mepc;
    output 	     regwrite;
    output 	     jump, link, jr;
    output 	     br;
@@ -100,7 +100,7 @@ module instruction_decoder
    wire [6:0] funct7;
    assign funct3 = inst[14:12];
    assign funct7 = inst[31:25];
-   reg 	      alu_is_signed, pc_update, pc_imm, pc_mepc, regwrite, jump, link, jr;
+   reg 	      alu_is_signed, pc_update, pc_mepc, regwrite, jump, link, jr;
    reg 	      br;
    reg [3:0]  dm_be;
    reg 	      dm_we;
@@ -112,7 +112,7 @@ module instruction_decoder
    reg 	      exception_illegal_instruction;
    reg 	      exception_load_misaligned;
    reg 	      exception_store_misaligned;
-   integer    aluop2_sel, alu_op;
+   integer    aluop1_sel, aluop2_sel, alu_op;
    always @ (*) begin : CONTROL_SIG_GENERATOR
       // Default register fields
       a_rs1 = inst[19:15];
@@ -120,12 +120,12 @@ module instruction_decoder
       a_rd  = inst[11:7];
       // Default ALU selections
       alu_is_signed = 1'b1;
+      aluop1_sel = `ALUOP1_RS1;
       aluop2_sel = `ALUOP2_UNKN;
       alu_op = `ALU_UNKN;
       // Default write actions
       regwrite = 1'b0;
       pc_update = 1'b0;
-      pc_imm = 1'b0;
       pc_mepc = 1'b0;
       // Default memory actions
       dm_be = 4'b0;
@@ -180,13 +180,17 @@ module instruction_decoder
 	   endcase // case (funct3)
 	end // case: OP_IMM
 	`LUI: begin
+	   aluop2_sel = `ALUOP2_IMM;
+	   alu_op = `ALU_ADD;
 	   regwrite = 1'b1;
 	   // 0 + imm
 	   a_rs1 = 5'd0;
 	end
 	`AUIPC: begin
-	   pc_update = 1'b1;
-	   pc_imm = 1'b1;
+	   regwrite = 1'b1;
+	   aluop1_sel = `ALUOP1_PC;
+	   aluop2_sel = `ALUOP2_IMM;
+	   alu_op = `ALU_ADD;
 	end
 	`OP: begin
 	   regwrite = 1'b1;

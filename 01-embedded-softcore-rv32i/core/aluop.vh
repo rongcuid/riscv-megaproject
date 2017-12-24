@@ -1,6 +1,10 @@
 `ifndef _aluop_vh_
  `define _aluop_vh_
 
+ `define ALUOP1_UNKN 32'bX
+ `define ALUOP1_RS1 0
+ `define ALUOP1_PC 1
+
  `define ALUOP2_UNKN 32'bX
  `define ALUOP2_RS2 0
  `define ALUOP2_IMM 1

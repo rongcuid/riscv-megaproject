@@ -45,8 +45,8 @@ module core
    // Instruction Decode
    wire [31:0] 	     FD_imm;
    wire 	     FD_alu_is_signed;
-   wire [31:0] 	     FD_aluop2_sel, FD_alu_op;
-   wire 	     FD_pc_update, FD_pc_imm, FD_pc_mepc;
+   wire [31:0] 	     FD_aluop1_sel, FD_aluop2_sel, FD_alu_op;
+   wire 	     FD_pc_update, FD_pc_mepc;
    wire 	     FD_regwrite;
    wire 	     FD_jump, FD_link, FD_jr, FD_br;
    wire [3:0] 	     FD_dm_be;
@@ -81,7 +81,7 @@ module core
    reg 	       XB_regwrite;
    reg 	       XB_memtoreg;
    reg 	       XB_alu_is_signed;
-   reg [31:0]  XB_aluop2_sel, XB_alu_op;
+   reg [31:0]  XB_aluop1_sel, XB_aluop2_sel, XB_alu_op;
    reg 	       XB_FD_exception_unsupported_category;
    reg 	       XB_FD_exception_illegal_instruction;
    reg 	       XB_FD_exception_instruction_misaligned;
@@ -108,8 +108,9 @@ module core
       .inst(im_do),
       .immediate(FD_imm),
       .alu_is_signed(FD_alu_is_signed),
-      .aluop2_sel(FD_aluop2_sel), .alu_op(FD_alu_op),
-      .pc_update(FD_pc_update), .pc_imm(FD_pc_imm), .pc_mepc(FD_pc_mepc),
+      .aluop1_sel(FD_aluop1_sel), .aluop2_sel(FD_aluop2_sel), 
+      .alu_op(FD_alu_op),
+      .pc_update(FD_pc_update), .pc_mepc(FD_pc_mepc),
       .regwrite(FD_regwrite), .jump(FD_jump), .link(FD_link),
       .jr(FD_jr), .br(FD_br),
       .dm_be(FD_dm_be), .dm_we(FD_dm_we), 
@@ -147,7 +148,6 @@ module core
       nextPC = (FD_initiate_illinst) ? `VEC_ILLEGAL_INST
 	       : (FD_initiate_misaligned) ? `VEC_MISALIGNED
 	       : (FD_pc_update & FD_pc_mepc) ? CSR_mepc
-	       : (FD_pc_update & FD_pc_imm) ? FD_imm + FD_PC
 	       : (do_branch) ? FD_imm + FD_PC
 	       : (FD_jump) ? FD_PC + FD_imm
 	       : (FD_jr) ? FD_aluout
@@ -233,7 +233,11 @@ module core
 
 
    always @ (*) begin : XB_ALU
-      XB_aluop1 = XB_d_rs1;
+      case (XB_aluop1_sel)
+	`ALUOP1_RS1: XB_aluop1 = XB_d_rs1;
+	`ALUOP1_PC: XB_aluop1 = XB_PC;
+	default: XB_aluop1 = 32'bX;
+      endcase
       case (XB_aluop2_sel)
 	`ALUOP2_RS2: XB_aluop2 = XB_d_rs2;
 	`ALUOP2_IMM: XB_aluop2 = XB_imm;
@@ -346,6 +350,8 @@ module core
 	 // XB_csr_imm <= 1'bX;
 	 XB_memtoreg <= 1'bX;
 	 XB_alu_is_signed <= 1'bX;
+	 XB_aluop1_sel <= 32'bX;
+	 XB_aluop2_sel <= 32'bX;
       end
       else if (clk) begin
 	 // XB stage
@@ -363,6 +369,7 @@ module core
 	 XB_a_rd <= FD_a_rd;
 	 //// Pure signals
 	 XB_memtoreg <= FD_dm_be[3] | FD_dm_be[2] | FD_dm_be[1] | FD_dm_be[0];
+	 XB_aluop1_sel <= FD_aluop1_sel;
 	 XB_aluop2_sel <= FD_aluop2_sel;
 	 XB_alu_op <= FD_alu_op;
 	 XB_alu_is_signed <= FD_alu_is_signed;
