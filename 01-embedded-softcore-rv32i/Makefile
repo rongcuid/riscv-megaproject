@@ -25,5 +25,5 @@ tb_out/%.bin: test/%.S
 
 TEST_PROGRAMS="tb_out/00-nop.bin"
 
-run_core_tb: compile_core_tb tb_out/00-nop.bin
+run_core_tb: compile_core_tb tb_out/00-nop.bin tb_out/01-opimm.bin
 	vvp tb_out/cpu_top_tb -lxt2

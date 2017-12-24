@@ -94,7 +94,29 @@ module core_tb();
 	 load_program("tb_out/00-nop.bin");
 	 hard_reset();
 	 for (i=0; i<16; i=i+1) begin
-	    $display("(TT) FD_PC=0x%h", UUT.FD_PC);
+	    $display("(TT) Opcode=%s, FD_PC=0x%h", FD_inst_category, UUT.FD_PC);
+	    @(posedge clk_tb);
+	 end
+      end	 
+   endtask //
+
+   // Test 1: OP-IMM
+   task run_test1;
+      integer 	    i;
+      begin
+	 $display("(TT) --------------------------------------------------");
+	 $display("(TT) Test 0: OP-IMM Test ");
+	 $display("(TT) 1. Waveform must be inspected");
+	 $display("(TT) 2. OP-IMM's start at PC=10, depositing x1 in XB stage");
+	 $display("(TT) 3. x1=1,2,3,4,5,6,1,2,1,0,1,-1,-1");
+	 $display("(TT) 4. Loops to 0x0C at 0x40");
+	 $display("(TT) --------------------------------------------------");
+
+	 load_program("tb_out/01-opimm.bin");
+	 hard_reset();
+	 for (i=0; i<20; i=i+1) begin
+	    $display("(TT) Opcode=%s, FD_PC=0x%h, x1=0x%h", 
+		     FD_inst_category, UUT.FD_PC, UUT.RF.data[1]);
 	    @(posedge clk_tb);
 	 end
       end	 
@@ -134,6 +156,7 @@ module core_tb();
 	@(posedge clk_tb);
 
 	run_test0();
+	run_test1();
 
 	$finish;
 	

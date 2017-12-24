@@ -236,7 +236,7 @@ module core
       XB_aluop1 = XB_d_rs1;
       case (XB_aluop2_sel)
 	`ALUOP2_RS2: XB_aluop2 = XB_d_rs2;
-	`ALUOP2_RS2: XB_aluop2 = XB_imm;
+	`ALUOP2_IMM: XB_aluop2 = XB_imm;
 	default: XB_aluop2 = 32'bX;
       endcase // case (XB_aluop2_sel)
       case (XB_alu_op)

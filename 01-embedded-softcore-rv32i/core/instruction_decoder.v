@@ -150,7 +150,7 @@ module instruction_decoder
 	`OP_IMM: begin
 	   // Immediate operation
 	   regwrite = 1'b1;
-	   aluop2_sel = `ALUOP2_RS2;
+	   aluop2_sel = `ALUOP2_IMM;
 	   case (funct3)
 	     3'b000: begin : ADDI
 		alu_op = `ALU_ADD;
