@@ -118,69 +118,99 @@ module core
       .csr_set(FD_csr_set), .csr_clear(FD_csr_clear), .csr_imm(FD_csr_imm),
       .a_rs1(FD_a_rs1), .a_rs2(FD_a_rs2), .a_rd(FD_a_rd), 
       .funct3(FD_funct3), .funct7(FD_funct7),
-      .bug_invalid_instr_format_onehot(FD_bug_invalid_instr_format_onehot),
+      .exception_unsupported_category(FD_exception_unsupported_category),
       .exception_illegal_instruction(FD_exception_illegal_instruction),
       .exception_load_misaligned(FD_exception_load_misaligned),
       .exception_store_misaligned(FD_exception_store_misaligned)
       );
 
+   reg [31:0]  nextPC_br;
+   reg 	       do_branch;
    always @ (*) begin : PC_UPDATE
-      nextPC = FD_PC + 32'h4;
-      // So that the first address is 0x0 on reset
-      if (resetb) begin
-	 if (FD_initiate_illinst) begin
-	    nextPC = `VEC_ILLEGAL_INST;
-	 end
-	 else if (FD_initiate_misaligned) begin
-	    nextPC = `VEC_MISALIGNED;
-	 end
-	 else if (FD_pc_update) begin : WRITE_PC
-	    if (FD_pc_mepc) begin : MRET
-	       nextPC = CSR_mepc;
-	    end
-	    else if (FD_pc_imm) begin : AUIPC
-	       nextPC = FD_imm + FD_PC;
-	    end
-	 end
-	 else if (FD_br) begin : BRANCH
-	    case (FD_funct3)
-	      3'b000: begin : BEQ
-		 if (FD_d_rs1 == FD_d_rs2) nextPC = FD_imm + FD_PC;
-	      end
-	      3'b001: begin : BNE
-		 if (FD_d_rs1 != FD_d_rs2) nextPC = FD_imm + FD_PC;
-	      end
-	      3'b100: begin : BLT
-		 if ($signed(FD_d_rs1) < $signed(FD_d_rs2)) 
-		   nextPC = FD_imm + FD_PC;
-	      end
-	      3'b101: begin : BGE
-		 if ($signed(FD_d_rs1) >= $signed(FD_d_rs2)) 
-		   nextPC = FD_imm + FD_PC;
-	      end
-	      3'b110: begin : BLTU
-		 if ($unsigned(FD_d_rs1) < $unsigned(FD_d_rs2)) 
-		   nextPC = FD_imm + FD_PC;
-	      end
-	      3'b111: begin : BGEU
-		 if ($unsigned(FD_d_rs1) >= $unsigned(FD_d_rs2)) 
-		   nextPC = FD_imm + FD_PC;
-	      end
-	    endcase
-	 end // block: BRANCH
-	 else if (FD_jump) begin : JAL
-	    nextPC = FD_PC + FD_imm;
-	 end
-	 else if (FD_jr) begin : JR
-	    nextPC = FD_aluout;
-	 end
-	 FD_exception_instruction_misaligned = 1'b0;
-	 if (nextPC[1:0] != 2'b00) begin
-	    FD_exception_instruction_misaligned = 1'b1;
-	 end
-      end // if (resetb)
+      do_branch = FD_br == 1'b0 ? 1'b0
+		  :
+		  (
+		   (FD_funct3==3'b000&&FD_d_rs1 == FD_d_rs2)
+		   ||
+		   (FD_funct3==3'b001&&FD_d_rs1 != FD_d_rs2)
+		   ||
+		   (FD_funct3==3'b100&&$signed(FD_d_rs1)<$signed(FD_d_rs2))
+		   ||
+		   (FD_funct3==3'b101&&$signed(FD_d_rs1)>=$signed(FD_d_rs2))
+		   ||
+		   (FD_funct3==3'b110&&$unsigned(FD_d_rs1)<$unsigned(FD_d_rs2))
+		   ||
+		   (FD_funct3==3'b111&&$unsigned(FD_d_rs1)>=$unsigned(FD_d_rs2))
+		   )
+		    ? 1'b1 : 1'b0;
+
+      nextPC = (FD_initiate_illinst) ? `VEC_ILLEGAL_INST
+	       : (FD_initiate_misaligned) ? `VEC_MISALIGNED
+	       : (FD_pc_update & FD_pc_mepc) ? CSR_mepc
+	       : (FD_pc_update & FD_pc_imm) ? FD_imm + FD_PC
+	       : (do_branch) ? FD_imm + FD_PC
+	       : (FD_jump) ? FD_PC + FD_imm
+	       : (FD_jr) ? FD_aluout
+	       : FD_PC + 32'd4;
+      FD_exception_instruction_misaligned = nextPC[1:0] != 2'b00;
       
       im_addr = nextPC;
+      //// Commented for removing X-optimism
+      // nextPC = FD_PC + 32'h4;
+      // // So that the first address is 0x0 on reset
+      // if (resetb) begin
+      // 	 if (FD_initiate_illinst) begin
+      // 	    nextPC = `VEC_ILLEGAL_INST;
+      // 	 end
+      // 	 else if (FD_initiate_misaligned) begin
+      // 	    nextPC = `VEC_MISALIGNED;
+      // 	 end
+      // 	 else if (FD_pc_update) begin : WRITE_PC
+      // 	    if (FD_pc_mepc) begin : MRET
+      // 	       nextPC = CSR_mepc;
+      // 	    end
+      // 	    else if (FD_pc_imm) begin : AUIPC
+      // 	       nextPC = FD_imm + FD_PC;
+      // 	    end
+      // 	 end
+      // 	 else if (FD_br) begin : BRANCH
+      // 	    case (FD_funct3)
+      // 	      3'b000: begin : BEQ
+      // 		 if (FD_d_rs1 == FD_d_rs2) nextPC = FD_imm + FD_PC;
+      // 	      end
+      // 	      3'b001: begin : BNE
+      // 		 if (FD_d_rs1 != FD_d_rs2) nextPC = FD_imm + FD_PC;
+      // 	      end
+      // 	      3'b100: begin : BLT
+      // 		 if ($signed(FD_d_rs1) < $signed(FD_d_rs2)) 
+      // 		   nextPC = FD_imm + FD_PC;
+      // 	      end
+      // 	      3'b101: begin : BGE
+      // 		 if ($signed(FD_d_rs1) >= $signed(FD_d_rs2)) 
+      // 		   nextPC = FD_imm + FD_PC;
+      // 	      end
+      // 	      3'b110: begin : BLTU
+      // 		 if ($unsigned(FD_d_rs1) < $unsigned(FD_d_rs2)) 
+      // 		   nextPC = FD_imm + FD_PC;
+      // 	      end
+      // 	      3'b111: begin : BGEU
+      // 		 if ($unsigned(FD_d_rs1) >= $unsigned(FD_d_rs2)) 
+      // 		   nextPC = FD_imm + FD_PC;
+      // 	      end
+      // 	    endcase
+      // 	 end // block: BRANCH
+      // 	 else if (FD_jump) begin : JAL
+      // 	    nextPC = FD_PC + FD_imm;
+      // 	 end
+      // 	 else if (FD_jr) begin : JR
+      // 	    nextPC = FD_aluout;
+      // 	 end
+      // 	 FD_exception_instruction_misaligned = 1'b0;
+      // 	 if (nextPC[1:0] != 2'b00) begin
+      // 	    FD_exception_instruction_misaligned = 1'b1;
+      // 	 end
+      // end // if (resetb)
+      
    end
 
    always @ (posedge clk, negedge resetb) begin : PROGRAM_COUNTER
@@ -214,18 +244,9 @@ module core
 	   XB_aluout = XB_aluop1 + XB_aluop2;
 	end
 	`ALU_SLT: begin
-	   if (XB_alu_is_signed) begin
-	      if ($signed(XB_aluop1) < $signed(XB_aluop2))
-		XB_aluout = 32'h1;
-	      else
-		XB_aluout = 32'h0;
-	   end
-	   else begin
-	      if ($unsigned(XB_aluop1) < $unsigned(XB_aluop2))
-		XB_aluout = 32'h1;
-	      else
-		XB_aluout = 32'h0;
-	   end
+	   XB_aluout = (XB_alu_is_signed)
+	     ? ($signed(XB_aluop1) < $signed(XB_aluop2) ? 32'h1 : 32'h0)
+	       : ($unsigned(XB_aluop1) < $unsigned(XB_aluop2) ? 32'h1 : 32'h0);
 	end
 	`ALU_AND: begin
 	   XB_aluout = XB_aluop1 & XB_aluop2;
@@ -279,16 +300,20 @@ module core
 
    // Writeback path select
    always @ (*) begin : XB_Writeback_Path
-      XB_d_rd = 32'bX;
-      if (XB_memtoreg) begin
-	 XB_d_rd = dm_do;
-      end
-      else if (XB_csr_read) begin
-	 XB_d_rd = XB_csr_out;
-      end
-      else begin
-	 XB_d_rd = XB_aluout;
-      end
+      XB_d_rd = XB_memtoreg ? dm_do
+		: XB_csr_read ? XB_csr_out
+		: XB_aluout;
+      // // Commented to remove X optimism
+      // XB_d_rd = 32'bX;
+      // if (XB_memtoreg) begin
+      // 	 XB_d_rd = dm_do;
+      // end
+      // else if (XB_csr_read) begin
+      // 	 XB_d_rd = XB_csr_out;
+      // end
+      // else begin
+      // 	 XB_d_rd = XB_aluout;
+      // end
    end
 
    assign FD_aluout = FD_d_rs1 + FD_imm;

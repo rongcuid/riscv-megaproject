@@ -98,7 +98,8 @@ module mmu(
 	 chosen_device_p <= 2'bX;
 	 is_signed_p <= 1'bX;
 	 dm_be_p <= 4'b0;
-	 im_do <= 32'bX;
+	 // NOP
+	 im_do <= 32'b0000_0000_0000_00000_000_00000_0010011;
 	 io_data_write <= 32'bX;
 	 io_en <= 1'b0;
 	 io_we <= 1'b0;
