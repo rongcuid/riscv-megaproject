@@ -73,16 +73,17 @@ module instruction_decoder
    end // block: INSTRUCTION_FORMAT
 
    reg [31:0] immediate;
-   reg 	      bug_invalid_instr_format_onehot; // No way this is one. This is not an exception
    always @ (*) begin : IMMEDIATE_DECODE
-      bug_invalid_instr_format_onehot = 1'b0;
       case (instr_IURJBS)
 	6'b100000: begin : I_TYPE
-	   if (opcode[6:2] == `OP_IMM && (funct3 == 3'b101 || funct3 == 3'b001))
-	     // SLLI, SRLI, SRAI
-	     immediate = {27'b0, inst[24:20]};
-	   else
-	     immediate = {{21{inst[31]}}, inst[30:20]};
+	   immediate
+	     = (
+		opcode[6:2] == `OP_IMM
+		&& 
+		(funct3 == 3'b101 || funct3 == 3'b001)
+		)
+	       ? {27'b0, inst[24:20]}
+	       : {{21{inst[31]}}, inst[30:20]};
 	end
 	6'b010000: immediate = {inst[31:12], 12'b0};
 	6'b001000: immediate = 32'bX;
@@ -91,7 +92,6 @@ module instruction_decoder
 	6'b000001: immediate = {{21{inst[31]}}, inst[30:25], inst[11:8], inst[7]};
 	default: begin
 	   immediate = 32'bX;
-	   bug_invalid_instr_format_onehot = 1'b1;
 	end
       endcase // case (instr_IURJBS)
    end // block: IMMEDIATE_DECODE
@@ -169,12 +169,7 @@ module instruction_decoder
 		alu_op = `ALU_XOR;
 	     end
 	     3'b101: begin : SRLI_SRAI
-		if (inst[30]) begin : SRAI
-		   alu_op = `ALU_SRA;
-		end
-		else begin : SRLI
-		   alu_op = `ALU_SRL;
-		end
+		alu_op = inst[30] ? `ALU_SRA : `ALU_SRL;
 	     end
 	     3'b110: begin : ORI
 		alu_op = `ALU_OR;
@@ -262,10 +257,7 @@ module instruction_decoder
 	`LOAD: begin
 	   case (funct3)
 	     3'b000, 3'b100: begin : LB
-		if (funct3 == 3'b000)
-		  mem_is_signed = 1'b1;
-		else
-		  mem_is_signed = 1'b0;
+		mem_is_signed = (funct3 == 3'b000) ? 1'b1 : 1'b0;
 		case (immediate[1:0])
 		  2'b00: begin
 		     dm_be = 4'b0001;
@@ -279,26 +271,30 @@ module instruction_decoder
 		  2'b11: begin
 		     dm_be = 4'b1000;
 		  end
+		  default:
+		    dm_be = 4'bX;
 		endcase // case (immediate[1:0])
 	     end
 	     3'b001, 3'b101: begin : LH
-		if (funct3 == 3'b001)
-		  mem_is_signed = 1'b1;
-		else
-		  mem_is_signed = 1'b0;
-		if (immediate[0])
-		  exception_load_misaligned = 1'b1;
-		else begin
-		   if (immediate[1])
-		     dm_be = 4'b1100;
-		   else
-		     dm_be = 4'b0011;
-		end
+		mem_is_signed = (funct3 == 3'b001) ? 1'b1 : 1'b0;
+		exception_load_misaligned = immediate[0] ? 1'b1 : 1'b0;
+		dm_be = immediate[0] ? 4'b0000
+			: immediate[1] ? 4'b1100 : 4'b0011;
+		// if (immediate[0])
+		//   exception_load_misaligned = 1'b1;
+		// else begin
+		//    if (immediate[1])
+		//      dm_be = 4'b1100;
+		//    else
+		//      dm_be = 4'b0011;
+		// end
 	     end
 	     3'b010: begin : LW
 		dm_be = 4'b1111;
-		if (immediate[0] | immediate[1])
-		  exception_load_misaligned = 1'b1;
+		exception_load_misaligned 
+		  = (immediate[0] | immediate[1]) ? 1'b1 : 1'b0;
+		// if (immediate[0] | immediate[1])
+		//   exception_load_misaligned = 1'b1;
 	     end
 	     default: begin 
 		exception_illegal_instruction = 1'b1;
@@ -325,19 +321,24 @@ module instruction_decoder
 		endcase // case (immediate[1:0])
 	     end
 	     3'b001: begin : SH
-		if (immediate[0])
-		  exception_store_misaligned = 1'b1;
-		else begin
-		   if (immediate[1])
-		     dm_be = 4'b1100;
-		   else
-		     dm_be = 4'b0011;
-		end
+		exception_store_misaligned = immediate[0] ? 1'b1 : 1'b0;
+		dm_be = immediate[0] ? 4'b0
+			: immediate[1] ? 4'b1100 : 4'b0011;
+		// if (immediate[0])
+		//   exception_store_misaligned = 1'b1;
+		// else begin
+		//    if (immediate[1])
+		//      dm_be = 4'b1100;
+		//    else
+		//      dm_be = 4'b0011;
+		// end
 	     end
 	     3'b010: begin : SW
 		dm_be = 4'b1111;
-		if (immediate[0] | immediate[1])
-		  exception_store_misaligned = 1'b1;
+		exception_store_misaligned
+		  = (immediate[0] | immediate[1]) ? 1'b1 : 1'b0;
+		// if (immediate[0] | immediate[1])
+		//   exception_store_misaligned = 1'b1;
 	     end
 	     default: begin 
 		exception_illegal_instruction = 1'b1;
@@ -407,8 +408,10 @@ module instruction_decoder
       endcase // case (opcode[6:2])
       
       // Lower two bits are always 11
-      if (opcode[1:0] != 2'b11)
-	exception_unsupported_category = 1'b1;
+      // exception_unsupported_category
+      // 	= (opcode[1:0] != 2'b11) ? 1'b1 : 1'b0;
+      // if (opcode[1:0] != 2'b11)
+      // 	exception_unsupported_category = 1'b1;
       
    end
    
