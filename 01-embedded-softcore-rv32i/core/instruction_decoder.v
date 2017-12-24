@@ -214,12 +214,13 @@ module instruction_decoder
 		alu_op = `ALU_XOR;
 	     end
 	     3'b101: begin : SRL_SRA
-		if (funct7[5]) begin : SRA
-		   alu_op = `ALU_SRA;
-		end
-		else begin : SRL
-		   alu_op = `ALU_SRL;
-		end
+		alu_op = funct7[5] ? `ALU_SRA : `ALU_SRL;
+		// if (funct7[5]) begin : SRA
+		//    alu_op = `ALU_SRA;
+		// end
+		// else begin : SRL
+		//    alu_op = `ALU_SRL;
+		// end
 	     end
 	     3'b110: begin : OR
 		alu_op = `ALU_OR;

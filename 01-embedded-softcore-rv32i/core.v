@@ -258,13 +258,13 @@ module core
 	   XB_aluout = XB_aluop1 ^ XB_aluop2;
 	end
 	`ALU_SLL: begin
-	   XB_aluout = XB_aluop1 << XB_imm[4:0];
+	   XB_aluout = XB_aluop1 << XB_aluop2[4:0];
 	end
 	`ALU_SRL: begin
-	   XB_aluout = XB_aluop1 >> XB_imm[4:0];
+	   XB_aluout = XB_aluop1 >> XB_aluop2[4:0];
 	end
 	`ALU_SRA: begin
-	   XB_aluout = $signed(XB_aluop1) >>> XB_imm[4:0];
+	   XB_aluout = $signed(XB_aluop1) >>> XB_aluop2[4:0];
 	end
 	`ALU_SUB: begin
 	   XB_aluout = XB_aluop1 - XB_aluop2;

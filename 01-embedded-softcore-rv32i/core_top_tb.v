@@ -26,20 +26,45 @@ module core_tb();
 	im_rom_flattened[i*4+:32] = instruction_memory_tb[i];
    end
 
-   reg [255:0] FD_inst_category;
+   reg [255:0] FD_disasm_opcode;
    always @ (*) begin : Disassembly
       case (UUT.inst_dec.opcode[6:2])
-	`LOAD: FD_inst_category = "LOAD    ";
-	`OP_IMM: FD_inst_category = "OP-IMM  ";
-	`AUIPC: FD_inst_category = "AUIPC   ";
-	`STORE: FD_inst_category = "STORE   ";
-	`OP: FD_inst_category = "OP      ";
-	`LUI:  FD_inst_category = "LUI     ";
-	`BRANCH: FD_inst_category = "BRANCH  ";
-	`JALR: FD_inst_category = "JALR    ";
-	`JAL: FD_inst_category = "JAL     ";
-	`SYSTEM: FD_inst_category = "SYSTEM  ";
-	default: FD_inst_category = "ILLEGAL ";
+	`LOAD: FD_disasm_opcode = "LOAD    ";
+	`OP_IMM: begin
+	   case (UUT.inst_dec.funct3)
+	     3'b000: FD_disasm_opcode = "ADDI    ";
+	     3'b001: FD_disasm_opcode = "SLLI    ";
+	     3'b010: FD_disasm_opcode = "SLTI    ";
+	     3'b011: FD_disasm_opcode = "SLTIU   ";
+	     3'b100: FD_disasm_opcode = "XORI    ";
+	     3'b101: FD_disasm_opcode = UUT.inst_dec.funct7[5] 
+					? "SRAI    " : "SRLI    ";
+	     3'b110: FD_disasm_opcode = "ORI     ";
+	     3'b111: FD_disasm_opcode = "ANDI    ";
+	     default: FD_disasm_opcode = "OP-IMM  ";
+	   endcase
+	end
+	`AUIPC: FD_disasm_opcode = "AUIPC   ";
+	`STORE: FD_disasm_opcode = "STORE   ";
+	`OP: begin
+	   case (UUT.inst_dec.funct3)
+	     3'b000: FD_disasm_opcode = UUT.inst_dec.funct7[5] ? "SUB     " : "ADD     ";
+	     3'b001: FD_disasm_opcode = "SLL     ";
+	     3'b010: FD_disasm_opcode = "SLT     ";
+	     3'b011: FD_disasm_opcode = "SLTU    ";
+	     3'b100: FD_disasm_opcode = "XOR     ";
+	     3'b101: FD_disasm_opcode = UUT.inst_dec.funct7[5] ? "SRA     " : "SRL     ";
+	     3'b110: FD_disasm_opcode = "OR      ";
+	     3'b111: FD_disasm_opcode = "AND     ";
+	     default: 	   FD_disasm_opcode = "OP?     ";
+	   endcase
+	end
+	`LUI:  FD_disasm_opcode = "LUI     ";
+	`BRANCH: FD_disasm_opcode = "BRANCH  ";
+	`JALR: FD_disasm_opcode = "JALR    ";
+	`JAL: FD_disasm_opcode = "JAL     ";
+	`SYSTEM: FD_disasm_opcode = "SYSTEM  ";
+	default: FD_disasm_opcode = "ILLEGAL ";
       endcase
    end
 
@@ -94,7 +119,7 @@ module core_tb();
 	 load_program("tb_out/00-nop.bin");
 	 hard_reset();
 	 for (i=0; i<16; i=i+1) begin
-	    $display("(TT) Opcode=%s, FD_PC=0x%h", FD_inst_category, UUT.FD_PC);
+	    $display("(TT) Opcode=%s, FD_PC=0x%h", FD_disasm_opcode, UUT.FD_PC);
 	    @(posedge clk_tb);
 	 end
       end	 
@@ -116,7 +141,29 @@ module core_tb();
 	 hard_reset();
 	 for (i=0; i<20; i=i+1) begin
 	    $display("(TT) Opcode=%s, FD_PC=0x%h, x1=0x%h", 
-		     FD_inst_category, UUT.FD_PC, UUT.RF.data[1]);
+		     FD_disasm_opcode, UUT.FD_PC, UUT.RF.data[1]);
+	    @(posedge clk_tb);
+	 end
+      end	 
+   endtask //
+
+   // Test 2: OP-IMM
+   task run_test2;
+      integer 	    i;
+      begin
+	 $display("(TT) --------------------------------------------------");
+	 $display("(TT) Test 2: OP Test ");
+	 $display("(TT) 1. Waveform must be inspected");
+	 $display("(TT) 2. OP's start at PC=14. x1 has 2 clock delay");
+	 $display("(TT) 3. x1=4,3,1,0,1,0,1,2,4,2,-2,-1,1,0,1");
+	 $display("(TT) 4. Loops to 0x0C at 50");
+	 $display("(TT) --------------------------------------------------");
+
+	 load_program("tb_out/02-op.bin");
+	 hard_reset();
+	 for (i=0; i<24; i=i+1) begin
+	    $display("(TT) Opcode=%s, FD_PC=0x%h, x1=0x%h", 
+		     FD_disasm_opcode, UUT.FD_PC, UUT.RF.data[1]);
 	    @(posedge clk_tb);
 	 end
       end	 
@@ -157,6 +204,7 @@ module core_tb();
 
 	run_test0();
 	run_test1();
+	run_test2();
 
 	$finish;
 	
