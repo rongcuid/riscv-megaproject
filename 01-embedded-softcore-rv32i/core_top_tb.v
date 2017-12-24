@@ -105,7 +105,7 @@ module core_tb();
       integer 	    i;
       begin
 	 $display("(TT) --------------------------------------------------");
-	 $display("(TT) Test 0: OP-IMM Test ");
+	 $display("(TT) Test 1: OP-IMM Test ");
 	 $display("(TT) 1. Waveform must be inspected");
 	 $display("(TT) 2. OP-IMM's start at PC=10, depositing x1 in XB stage");
 	 $display("(TT) 3. x1=1,2,3,4,5,6,1,2,1,0,1,-1,-1");
