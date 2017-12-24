@@ -48,19 +48,31 @@ module core_tb();
 	`STORE: FD_disasm_opcode = "STORE   ";
 	`OP: begin
 	   case (UUT.inst_dec.funct3)
-	     3'b000: FD_disasm_opcode = UUT.inst_dec.funct7[5] ? "SUB     " : "ADD     ";
+	     3'b000: FD_disasm_opcode = UUT.inst_dec.funct7[5] 
+					? "SUB     " : "ADD     ";
 	     3'b001: FD_disasm_opcode = "SLL     ";
 	     3'b010: FD_disasm_opcode = "SLT     ";
 	     3'b011: FD_disasm_opcode = "SLTU    ";
 	     3'b100: FD_disasm_opcode = "XOR     ";
-	     3'b101: FD_disasm_opcode = UUT.inst_dec.funct7[5] ? "SRA     " : "SRL     ";
+	     3'b101: FD_disasm_opcode = UUT.inst_dec.funct7[5] 
+					? "SRA     " : "SRL     ";
 	     3'b110: FD_disasm_opcode = "OR      ";
 	     3'b111: FD_disasm_opcode = "AND     ";
 	     default: 	   FD_disasm_opcode = "OP?     ";
 	   endcase
 	end
 	`LUI:  FD_disasm_opcode = "LUI     ";
-	`BRANCH: FD_disasm_opcode = "BRANCH  ";
+	`BRANCH: begin
+	   case (UUT.inst_dec.funct3)
+	     3'b000: FD_disasm_opcode = "BEQ     ";
+	     3'b001: FD_disasm_opcode = "BNE     ";
+	     3'b100: FD_disasm_opcode = "BLT     ";
+	     3'b101: FD_disasm_opcode = "BGE     ";
+	     3'b110: FD_disasm_opcode = "BLTU    ";
+	     3'b111: FD_disasm_opcode = "BGEU    ";
+	   default: FD_disasm_opcode = "BRANCH  ";
+	   endcase
+	end
 	`JALR: FD_disasm_opcode = "JALR    ";
 	`JAL: FD_disasm_opcode = "JAL     ";
 	`SYSTEM: FD_disasm_opcode = "SYSTEM  ";
@@ -147,7 +159,7 @@ module core_tb();
       end	 
    endtask //
 
-   // Test 2: OP-IMM
+   // Test 2: OP
    task run_test2;
       integer 	    i;
       begin
@@ -164,6 +176,26 @@ module core_tb();
 	 for (i=0; i<24; i=i+1) begin
 	    $display("(TT) Opcode=%s, FD_PC=0x%h, x1=0x%h", 
 		     FD_disasm_opcode, UUT.FD_PC, UUT.RF.data[1]);
+	    @(posedge clk_tb);
+	 end
+      end	 
+   endtask //
+
+   // Test 3: Branch
+   task run_test3;
+      integer 	    i;
+      begin
+	 $display("(TT) --------------------------------------------------");
+	 $display("(TT) Test 3: Branch Test ");
+	 $display("(TT) 1. Waveform must be inspected");
+	 $display("(TT) 2. Each type of branch instruction executes twice")
+	 $display("(TT) --------------------------------------------------");
+
+	 load_program("tb_out/03-br.bin");
+	 hard_reset();
+	 for (i=0; i<48; i=i+1) begin
+	    $display("(TT) Opcode=%s, FD_PC=0x%h", 
+		     FD_disasm_opcode, UUT.FD_PC);
 	    @(posedge clk_tb);
 	 end
       end	 
@@ -202,9 +234,10 @@ module core_tb();
 
 	@(posedge clk_tb);
 
-	run_test0();
-	run_test1();
-	run_test2();
+	// run_test0();
+	// run_test1();
+	// run_test2();
+	run_test3();
 
 	$finish;
 	
