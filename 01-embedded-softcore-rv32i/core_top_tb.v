@@ -130,8 +130,8 @@ module core_tb();
 
 	 load_program("tb_out/00-nop.bin");
 	 hard_reset();
-	 for (i=0; i<16; i=i+1) begin
-	    $display("(TT) Opcode=%s, FD_PC=0x%h", FD_disasm_opcode, UUT.FD_PC);
+	 for (i=0; i<12; i=i+1) begin
+	    $display("(TT) Opcode=%0s, FD_PC=0x%h", FD_disasm_opcode, UUT.FD_PC);
 	    @(posedge clk_tb);
 	 end
       end	 
@@ -152,8 +152,8 @@ module core_tb();
 	 load_program("tb_out/01-opimm.bin");
 	 hard_reset();
 	 for (i=0; i<20; i=i+1) begin
-	    $display("(TT) Opcode=%s, FD_PC=0x%h, x1=0x%h", 
-		     FD_disasm_opcode, UUT.FD_PC, UUT.RF.data[1]);
+	    $display("(TT) Opcode=%0s, FD_PC=0x%h, x1=%0D", 
+		     FD_disasm_opcode, UUT.FD_PC, $signed(UUT.RF.data[1]));
 	    @(posedge clk_tb);
 	 end
       end	 
@@ -174,8 +174,8 @@ module core_tb();
 	 load_program("tb_out/02-op.bin");
 	 hard_reset();
 	 for (i=0; i<24; i=i+1) begin
-	    $display("(TT) Opcode=%s, FD_PC=0x%h, x1=0x%h", 
-		     FD_disasm_opcode, UUT.FD_PC, UUT.RF.data[1]);
+	    $display("(TT) Opcode=%0s, FD_PC=0x%h, x1=%0D", 
+		     FD_disasm_opcode, UUT.FD_PC, $signed(UUT.RF.data[1]));
 	    @(posedge clk_tb);
 	 end
       end	 
@@ -188,14 +188,36 @@ module core_tb();
 	 $display("(TT) --------------------------------------------------");
 	 $display("(TT) Test 3: Branch Test ");
 	 $display("(TT) 1. Waveform must be inspected");
-	 $display("(TT) 2. Each type of branch instruction executes twice")
+	 $display("(TT) 2. Each type of branch instruction executes twice");
 	 $display("(TT) --------------------------------------------------");
 
 	 load_program("tb_out/03-br.bin");
 	 hard_reset();
 	 for (i=0; i<48; i=i+1) begin
-	    $display("(TT) Opcode=%s, FD_PC=0x%h", 
+	    $display("(TT) Opcode=%0s, FD_PC=0x%h", 
 		     FD_disasm_opcode, UUT.FD_PC);
+	    @(posedge clk_tb);
+	 end
+      end	 
+   endtask //
+
+   // Test 4: LUI
+   task run_test4;
+      integer 	    i;
+      begin
+	 $display("(TT) --------------------------------------------------");
+	 $display("(TT) Test 4: LUI/AUIPC Test ");
+	 $display("(TT) 1. Waveform must be inspected");
+	 $display("(TT) 2. First, x1 will be loaded with 0xDEADBEEF");
+	 $display("(TT) 3. Then, x1 will be loaded with PC=0x14");
+	 $display("(TT) 4. Loops at 0x18");
+	 $display("(TT) --------------------------------------------------");
+
+	 load_program("tb_out/04-lui.bin");
+	 hard_reset();
+	 for (i=0; i<16; i=i+1) begin
+	    $display("(TT) Opcode=%0s, FD_PC=0x%h, x1=0x%h", 
+		     FD_disasm_opcode, UUT.FD_PC, UUT.RF.data[1]);
 	    @(posedge clk_tb);
 	 end
       end	 
@@ -234,10 +256,11 @@ module core_tb();
 
 	@(posedge clk_tb);
 
-	// run_test0();
-	// run_test1();
-	// run_test2();
+	run_test0();
+	run_test1();
+	run_test2();
 	run_test3();
+	run_test4();
 
 	$finish;
 	

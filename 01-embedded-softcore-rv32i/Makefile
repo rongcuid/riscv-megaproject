@@ -27,6 +27,7 @@ TEST_PROGRAMS=tb_out/00-nop.bin
 TEST_PROGRAMS+=tb_out/01-opimm.bin
 TEST_PROGRAMS+=tb_out/02-op.bin
 TEST_PROGRAMS+=tb_out/03-br.bin
+TEST_PROGRAMS+=tb_out/04-lui.bin
 
 run_core_tb: compile_core_tb $(TEST_PROGRAMS)
 	vvp tb_out/cpu_top_tb -lxt2
