@@ -261,6 +261,7 @@ module instruction_decoder
 	   endcase // case (funct3)
 	end
 	`LOAD: begin
+	   regwrite = 1'b1;
 	   case (funct3)
 	     3'b000, 3'b100: begin : LB
 		mem_is_signed = (funct3 == 3'b000) ? 1'b1 : 1'b0;
