@@ -472,7 +472,7 @@ module core_tb();
 
 	 load_program("tb_out/15-exception.bin");
 	 hard_reset();
-	 for (i=0; i<80; i=i+1) begin
+	 for (i=0; i<256; i=i+1) begin
 	    $display("(TT) Op=%0s, PC=0x%h, x1=0x%h, x6=0x%h, x7=0x%h", 
 	    	     FD_disasm_opcode, UUT.FD_PC,
 		     UUT.RF.data[1],

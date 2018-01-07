@@ -17,13 +17,48 @@ clear_mem:
 	bge x1, x2, clear_mem
 
 test_load_misaligned:
-	li x1, 0xDEADBEEF
 	li x3, 0xDEADBEEF
+
+test_lw_misaligned:	
+	li x1, 0xDEADBEEF
 	li x4, 4  # Load address misaligned
 	li x5, 0x44 # Exception PC
 	lw x1, 1(x2)
 	bne x1, x3, test_failed # x1 must be restored
 	bne x4, x7, test_failed # mcause check
+	bne x5, x6, test_failed # mepc check
+test_lh_misaligned:	
+	li x1, 0xDEADBEEF
+	li x4, 4  # Load address misaligned
+	li x5, 0x64 # Exception PC
+	lh x1, 1(x2)
+	bne x1, x3, test_failed # x1 must be restored
+	bne x4, x7, test_failed # mcause check
+	bne x5, x6, test_failed # mepc check
+
+test_sw_misaligned:
+	li x1, 0xDEADBEEF
+	li x4, 6 # Store address misaligned
+	li x5, 0x84 # Exception PC
+	sw x0, 1(x2)
+	bne x1, x3, test_failed
+	bne x4, x7, test_failed
+	bne x5, x6, test_failed
+test_sh_misaligned:	
+	li x5, 0x98 # Exception PC
+	sh x0, 1(x2)
+	bne x1, x3, test_failed
+	bne x4, x7, test_failed
+	bne x5, x6, test_failed
+
+test_inst_misaligned:
+	li x4, 0
+	li x5, 0xB4
+	li x16, 0x1
+	jr x16
+	bne x1, x3, test_failed
+	bne x4, x7, test_failed
+	bne x5, x6, test_failed
 	
 	j main
 

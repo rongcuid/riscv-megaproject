@@ -100,7 +100,7 @@ module csr_ehu
 	    mepc <= XB_pc;
 	 end
 	 else if (FD_exception) begin
-	    mepc <= FD_pc;
+	    mepc <= XB_pc;
 	    if (XB_FD_exception_instruction_misaligned) begin
 	       mcause <= 32'd0;
 	    end
