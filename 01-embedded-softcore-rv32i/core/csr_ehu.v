@@ -98,6 +98,9 @@ module csr_ehu
 	 end
 	 if (XB_exception) begin
 	    mepc <= XB_pc;
+	 end
+	 else if (FD_exception) begin
+	    mepc <= FD_pc;
 	    if (XB_FD_exception_instruction_misaligned) begin
 	       mcause <= 32'd0;
 	    end
@@ -111,9 +114,6 @@ module csr_ehu
 	    else if (XB_FD_exception_store_misaligned) begin
 	       mcause <= 32'd6;
 	    end
-	 end
-	 else if (FD_exception) begin
-	    mepc <= FD_pc;
 	 end
       case (src_dst)
 	`CSR_MVENDORID: begin

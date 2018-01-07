@@ -38,6 +38,7 @@ TEST_PROGRAMS+=tb_out/11-csrci.bin
 TEST_PROGRAMS+=tb_out/12-csrc.bin
 TEST_PROGRAMS+=tb_out/13-csr.bin
 TEST_PROGRAMS+=tb_out/14-mem.bin
+TEST_PROGRAMS+=tb_out/15-exception.bin
 
 
 run_core_tb: compile_core_tb $(TEST_PROGRAMS)

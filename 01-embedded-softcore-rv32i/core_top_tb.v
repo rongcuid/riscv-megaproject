@@ -77,6 +77,14 @@ module core_tb();
 	`JAL: FD_disasm_opcode = "JAL     ";
 	`SYSTEM: begin 
 	   case (UUT.inst_dec.funct3)
+	     3'b000: begin
+		if (UUT.inst_dec.funct7==7'b0011000 &&
+		    UUT.inst_dec.a_rs2 == 5'b00010 &&
+		    UUT.inst_dec.a_rs1 == 5'b00000)
+		  FD_disasm_opcode = "MRET    ";
+		else
+		  FD_disasm_opcode = "SYSTEM  ";
+	     end
 	     3'b001: FD_disasm_opcode = "CSRRW   ";
 	     3'b010: FD_disasm_opcode = "CSRRS   ";
 	     3'b011: FD_disasm_opcode = "CSRRC   ";
@@ -443,8 +451,33 @@ module core_tb();
 	 load_program("tb_out/14-mem.bin");
 	 hard_reset();
 	 for (i=0; i<80; i=i+1) begin
-	    $display("(TT) Opcode=%0s, FD_PC=0x%h, x1=0x%h", 
-	    	     FD_disasm_opcode, UUT.FD_PC, UUT.RF.data[1]);
+	    // $display("(TT) Opcode=%0s, FD_PC=0x%h, x1=0x%h", 
+	    // 	     FD_disasm_opcode, UUT.FD_PC, UUT.RF.data[1]);
+	    if (UUT.FD_PC == 32'h10 || FD_disasm_opcode == "ILLEGAL ")
+	      $display("(TT) Test failed!");
+	    @(posedge clk_tb);
+	 end
+      end
+   endtask //
+
+   // Test 15: Exception
+   task run_test15;
+      integer 	    i;
+      begin
+	 $display("(TT) --------------------------------------------------");
+	 $display("(TT) Test 15: Exception");
+	 $display("(TT) 1. On failure, a message is displayed");
+	 $display("(TT) 2. Failure vector is PC=0x10");
+	 $display("(TT) --------------------------------------------------");
+
+	 load_program("tb_out/15-exception.bin");
+	 hard_reset();
+	 for (i=0; i<80; i=i+1) begin
+	    $display("(TT) Op=%0s, PC=0x%h, x1=0x%h, x6=0x%h, x7=0x%h", 
+	    	     FD_disasm_opcode, UUT.FD_PC,
+		     UUT.RF.data[1],
+		     UUT.RF.data[6],
+		     UUT.RF.data[7]);
 	    if (UUT.FD_PC == 32'h10 || FD_disasm_opcode == "ILLEGAL ")
 	      $display("(TT) Test failed!");
 	    @(posedge clk_tb);
@@ -485,21 +518,22 @@ module core_tb();
 
 	@(posedge clk_tb);
 
-	// run_test0();
-	// run_test1();
-	// run_test2();
-	// run_test3();
-	// run_test4();
-	// run_test5();
-	// run_test6();
-	// run_test7();
-	// run_test8();
-	// run_test9();
-	// run_test10();
-	// run_test11();
-	// run_test12();
-	// run_test13();
+	run_test0();
+	run_test1();
+	run_test2();
+	run_test3();
+	run_test4();
+	run_test5();
+	run_test6();
+	run_test7();
+	run_test8();
+	run_test9();
+	run_test10();
+	run_test11();
+	run_test12();
+	run_test13();
 	run_test14();
+	run_test15();
 
 	$finish;
 	

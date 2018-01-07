@@ -287,21 +287,11 @@ module instruction_decoder
 		exception_load_misaligned = immediate[0] ? 1'b1 : 1'b0;
 		dm_be = immediate[0] ? 4'b0000
 			: immediate[1] ? 4'b1100 : 4'b0011;
-		// if (immediate[0])
-		//   exception_load_misaligned = 1'b1;
-		// else begin
-		//    if (immediate[1])
-		//      dm_be = 4'b1100;
-		//    else
-		//      dm_be = 4'b0011;
-		// end
 	     end
 	     3'b010: begin : LW
 		dm_be = 4'b1111;
 		exception_load_misaligned 
 		  = (immediate[0] | immediate[1]) ? 1'b1 : 1'b0;
-		// if (immediate[0] | immediate[1])
-		//   exception_load_misaligned = 1'b1;
 	     end
 	     default: begin 
 		exception_illegal_instruction = 1'b1;
@@ -419,6 +409,13 @@ module instruction_decoder
 	   exception_unsupported_category = 1'b1;
 	end
       endcase // case (opcode[6:2])
+
+      if (exception_unsupported_category
+	  | exception_illegal_instruction
+	  | exception_load_misaligned
+	  | exception_store_misaligned) begin
+	 regwrite = 1'b0;
+      end
       
       // Lower two bits are always 11
       // exception_unsupported_category
