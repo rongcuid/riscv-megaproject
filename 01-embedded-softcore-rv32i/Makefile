@@ -36,7 +36,7 @@ TEST_PROGRAMS+=tb_out/09-csrsi.bin
 TEST_PROGRAMS+=tb_out/10-csrs.bin
 TEST_PROGRAMS+=tb_out/11-csrci.bin
 TEST_PROGRAMS+=tb_out/12-csrc.bin
-# TEST_PROGRAMS+=tb_out/13-csrex.bin
+TEST_PROGRAMS+=tb_out/13-csr.bin
 
 
 run_core_tb: compile_core_tb $(TEST_PROGRAMS)
