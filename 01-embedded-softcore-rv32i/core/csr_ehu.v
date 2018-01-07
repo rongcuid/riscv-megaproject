@@ -32,13 +32,13 @@ module csr_ehu
    output reg [31:0] data_out;
    output reg 	     initiate_illinst, initiate_misaligned;
    output wire [31:0] csr_mepc;
-   reg 		     XB_exception_illegal_instruction;
-   reg [31:0] 	     mepc;
-   reg [31:0] 	     mscratch, mcause, mtval;
-   reg [63:0] 	     mcycle, minstret;
+   reg 		      XB_exception_illegal_instruction;
+   reg [31:0] 	      mepc;
+   reg [31:0] 	      mscratch, mcause, mtval;
+   reg [63:0] 	      mcycle, minstret;
 
-   wire 	     initiate_exception;
-   wire 	     FD_exception, XB_exception;
+   wire 	      initiate_exception;
+   wire 	      FD_exception, XB_exception;
    assign FD_exception = XB_FD_exception_unsupported_category |
    		         XB_FD_exception_illegal_instruction |
    		         XB_FD_exception_instruction_misaligned |
@@ -96,8 +96,94 @@ module csr_ehu
 	    // Instruction is committed when it is not a bubble
 	    minstret <= minstret + 64'b1;
 	 end
+	 case (src_dst)
+	   `CSR_MVENDORID: begin
+	      if (really_read) data_out <= 32'b0;
+	   end
+	   `CSR_MARCHID: begin
+	      if (really_read) data_out <= 32'b0;
+	   end
+	   `CSR_MIMPID: begin
+	      if (really_read) data_out <= 32'b0;
+	   end
+	   `CSR_MHARTID: begin
+	      if (really_read) data_out <= 32'b0;
+	   end
+	   `CSR_MISA: begin
+	      // 32-bit, I
+	      if (really_read) data_out <= 32'b0100_0000_0000_0000_0000_0001_0000_0000;
+	   end
+	   `CSR_MTVEC: begin
+	      // Direct
+	      if (really_read) data_out <= 32'b0;
+	   end
+	   `CSR_MSCRATCH: begin
+	      if (really_read) data_out <= mscratch;
+	      if (really_write) mscratch <= operand;
+	      if (really_set) mscratch <= mscratch | operand;
+	      if (really_clear) mscratch <= mscratch & ~operand;
+	   end
+	   `CSR_MEPC: begin
+	      if (really_read) data_out <= mepc;
+	      if (really_write) mepc <= operand;
+	      if (really_set) mepc <= mepc | operand;
+	      if (really_clear) mepc <= mepc & ~operand;
+	   end
+	   `CSR_MCAUSE: begin
+	      if (really_read) data_out <= mcause;
+	      if (really_write) mcause <= operand;
+	      if (really_set) mcause <= mcause | operand;
+	      if (really_clear) mcause <= mcause & ~operand;
+	   end
+	   `CSR_MTVAL: begin
+	      if (really_read) data_out <= mtval;
+	      if (really_write) mtval <= operand;
+	      if (really_set) mtval <= mtval | operand;
+	      if (really_clear) mtval <= mtval & ~operand;
+	   end
+	   `CSR_MCYCLE: begin
+	      if (really_read) data_out <= mcycle[0+:32];
+	      if (really_write) mcycle[0+:32] <= operand;
+	      if (really_set) mcycle[0+:32] <= mcycle[0+:32] | operand;
+	      if (really_clear) mcycle[0+:32] <= mcycle[0+:32] & ~operand;
+	   end
+	   `CSR_MINSTRET: begin
+	      if (really_read) data_out <= minstret[0+:32];
+	      if (really_write) minstret[0+:32] <= operand;
+	      if (really_set) minstret[0+:32] <= minstret[0+:32] | operand;
+	      if (really_clear) minstret[0+:32] <= minstret[0+:32] & ~operand;
+	   end
+	   `CSR_MCYCLEH: begin
+	      if (really_read) data_out <= mcycle[32+:32];
+	      if (really_write) mcycle[32+:32] <= operand;
+	      if (really_set) mcycle[32+:32] <= mcycle[32+:32] | operand;
+	      if (really_clear) mcycle[32+:32] <= mcycle[32+:32] & ~operand;
+	   end
+	   `CSR_MINSTRETH: begin
+	      if (really_read) data_out <= minstret[32+:32];
+	      if (really_write) minstret[32+:32] <= operand;
+	      if (really_set) minstret[32+:32] <= minstret[32+:32] | operand;
+	      if (really_clear) minstret[32+:32] <= minstret[32+:32] & ~operand;
+	   end
+	   default: begin
+	      if (src_dst[11:4] == 8'hB0 || 
+		  src_dst[11:4] == 8'hB1 ||
+		  src_dst[11:4] == 8'hB8 ||
+		  src_dst[11:4] == 8'hB9 ||
+		  src_dst[11:4] == 8'h32 ||
+		  src_dst[11:4] == 8'h33
+		  ) begin : PERFORMANCE_MONITORS
+		 data_out <= 32'b0;
+	      end
+	      else begin
+		 if (~XB_bubble & (read|write|set|clear))
+		   XB_exception_illegal_instruction = 1'b1;
+	      end // else: !if(src_dst[11:4] == 8'hB0 ||...
+	   end // case: default
+	 endcase // case (src_dst)
 	 if (XB_exception) begin
-	    mepc <= XB_pc;
+	    mepc <= FD_pc;
+	    mcause <= 32'd2; // Illegal Instruction
 	 end
 	 else if (FD_exception) begin
 	    mepc <= XB_pc;
@@ -115,91 +201,6 @@ module csr_ehu
 	       mcause <= 32'd6;
 	    end
 	 end
-      case (src_dst)
-	`CSR_MVENDORID: begin
-	   if (really_read) data_out <= 32'b0;
-	end
-	`CSR_MARCHID: begin
-	   if (really_read) data_out <= 32'b0;
-	end
-	`CSR_MIMPID: begin
-	   if (really_read) data_out <= 32'b0;
-	end
-	`CSR_MHARTID: begin
-	   if (really_read) data_out <= 32'b0;
-	end
-	`CSR_MISA: begin
-	   // 32-bit, I
-	   if (really_read) data_out <= 32'b0100_0000_0000_0000_0000_0001_0000_0000;
-	end
-	`CSR_MTVEC: begin
-	   // Direct
-	   if (really_read) data_out <= 32'b0;
-	end
-	`CSR_MSCRATCH: begin
-	   if (really_read) data_out <= mscratch;
-	   if (really_write) mscratch <= operand;
-	   if (really_set) mscratch <= mscratch | operand;
-	   if (really_clear) mscratch <= mscratch & ~operand;
-	end
-	`CSR_MEPC: begin
-	   if (really_read) data_out <= mepc;
-	   if (really_write) mepc <= operand;
-	   if (really_set) mepc <= mepc | operand;
-	   if (really_clear) mepc <= mepc & ~operand;
-	end
-	`CSR_MCAUSE: begin
-	   if (really_read) data_out <= mcause;
-	   if (really_write) mcause <= operand;
-	   if (really_set) mcause <= mcause | operand;
-	   if (really_clear) mcause <= mcause & ~operand;
-	end
-	`CSR_MTVAL: begin
-	   if (really_read) data_out <= mtval;
-	   if (really_write) mtval <= operand;
-	   if (really_set) mtval <= mtval | operand;
-	   if (really_clear) mtval <= mtval & ~operand;
-	end
-	`CSR_MCYCLE: begin
-	   if (really_read) data_out <= mcycle[0+:32];
-	   if (really_write) mcycle[0+:32] <= operand;
-	   if (really_set) mcycle[0+:32] <= mcycle[0+:32] | operand;
-	   if (really_clear) mcycle[0+:32] <= mcycle[0+:32] & ~operand;
-	end
-	`CSR_MINSTRET: begin
-	   if (really_read) data_out <= minstret[0+:32];
-	   if (really_write) minstret[0+:32] <= operand;
-	   if (really_set) minstret[0+:32] <= minstret[0+:32] | operand;
-	   if (really_clear) minstret[0+:32] <= minstret[0+:32] & ~operand;
-	end
-	`CSR_MCYCLEH: begin
-	   if (really_read) data_out <= mcycle[32+:32];
-	   if (really_write) mcycle[32+:32] <= operand;
-	   if (really_set) mcycle[32+:32] <= mcycle[32+:32] | operand;
-	   if (really_clear) mcycle[32+:32] <= mcycle[32+:32] & ~operand;
-	end
-	`CSR_MINSTRETH: begin
-	   if (really_read) data_out <= minstret[32+:32];
-	   if (really_write) minstret[32+:32] <= operand;
-	   if (really_set) minstret[32+:32] <= minstret[32+:32] | operand;
-	   if (really_clear) minstret[32+:32] <= minstret[32+:32] & ~operand;
-	end
-	default: begin
-	   if (src_dst[11:4] == 8'hB0 || 
-	       src_dst[11:4] == 8'hB1 ||
-	       src_dst[11:4] == 8'hB8 ||
-	       src_dst[11:4] == 8'hB9 ||
-	       src_dst[11:4] == 8'h32 ||
-	       src_dst[11:4] == 8'h33
-	       ) begin : PERFORMANCE_MONITORS
-	      data_out <= 32'b0;
-	   end
-	   else begin
-	      if (~XB_bubble & (read|write|set|clear))
-		XB_exception_illegal_instruction = 1'b1;
-	   end // else: !if(src_dst[11:4] == 8'hB0 ||...
-	end // case: default
-      endcase // case (src_dst)
       end // if (clk)
    end // block: CSR_PIPELINE
    

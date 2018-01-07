@@ -52,14 +52,23 @@ test_sh_misaligned:
 	bne x5, x6, test_failed
 
 test_inst_misaligned:
-	li x4, 0
+	li x4, 0 # Instruction misaligned
 	li x5, 0xB4
 	li x16, 0x1
 	jr x16
 	bne x1, x3, test_failed
 	bne x4, x7, test_failed
 	bne x5, x6, test_failed
-	
+
+test_illegal_csr:
+	li x4, 2 # Illegal Instruction
+	li x5, 0xCC
+	csrr x31, mip
+	bne x1, x3, test_failed
+	bne x4, x7, test_failed
+	bne x5, x6, test_failed
+
+
 	j main
 
 
