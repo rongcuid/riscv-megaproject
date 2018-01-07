@@ -319,6 +319,28 @@ module core_tb();
 	 end
       end
    endtask //
+
+   // Test 9: CSRSI
+   task run_test9;
+      integer 	    i;
+      begin
+	 $display("(TT) --------------------------------------------------");
+	 $display("(TT) Test 9: CSRSI Test ");
+	 $display("(TT) 1. On failure, a message is displayed");
+	 $display("(TT) 2. Failure vector is PC=0x10");
+	 $display("(TT) --------------------------------------------------");
+
+	 load_program("tb_out/09-csrsi.bin");
+	 hard_reset();
+	 for (i=0; i<48; i=i+1) begin
+	    // $display("(TT) Opcode=%0s, FD_PC=0x%h, x1=0x%h", 
+	    // 	     FD_disasm_opcode, UUT.FD_PC, UUT.RF.data[1]);
+	    if (UUT.FD_PC == 32'h10 || FD_disasm_opcode == "ILLEGAL ")
+	      $display("(TT) Test failed!");
+	    @(posedge clk_tb);
+	 end
+      end
+   endtask //
    
    assign im_data_tb = instruction_memory_tb[im_addr_out_tb[11:2]];
    assign io_data_read_tb = io_memory_tb[io_addr_tb[7:2]];
@@ -353,15 +375,16 @@ module core_tb();
 
 	@(posedge clk_tb);
 
-	// run_test0();
-	// run_test1();
-	// run_test2();
-	// run_test3();
-	// run_test4();
-	// run_test5();
-	// run_test6();
-	// run_test7();
+	run_test0();
+	run_test1();
+	run_test2();
+	run_test3();
+	run_test4();
+	run_test5();
+	run_test6();
+	run_test7();
 	run_test8();
+	run_test9();
 
 	$finish;
 	
