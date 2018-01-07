@@ -98,6 +98,7 @@ module core
    wire [31:0] XB_csr_out;
    wire        XB_csr_read, XB_csr_write, XB_csr_set, XB_csr_clear, XB_csr_imm;
    wire [31:0] CSR_mepc;
+   reg 	       XB_csr_writeback;
 
    assign dm_be = FD_bubble ? 4'b0 : FD_dm_be;
    assign dm_we = FD_bubble ? 1'b0 : FD_dm_we;
@@ -305,7 +306,7 @@ module core
    // Writeback path select
    always @ (*) begin : XB_Writeback_Path
       XB_d_rd = XB_memtoreg ? dm_do
-		: XB_csr_read ? XB_csr_out
+		: XB_csr_writeback ? XB_csr_out
 		: XB_aluout;
       // // Commented to remove X optimism
       // XB_d_rd = 32'bX;
@@ -331,6 +332,7 @@ module core
       if (!resetb) begin
 	 // Initialize stage registers with side effects
 	 XB_regwrite <= 1'b0;
+	 XB_csr_writeback <= 1'b0;
 	 // XB_csr_read <= 1'b0;
 	 // XB_csr_write <= 1'b0;
 	 // XB_csr_set <= 1'b0;
@@ -377,6 +379,7 @@ module core
 	 //// Side effect signals
 	 XB_bubble <= FD_bubble;
 	 if (!FD_bubble) begin
+	    XB_csr_writeback <= XB_csr_read;
 	    XB_regwrite <= FD_regwrite;
 	    XB_FD_exception_unsupported_category 
 	      <= FD_exception_unsupported_category;

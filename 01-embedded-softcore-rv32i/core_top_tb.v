@@ -75,7 +75,17 @@ module core_tb();
 	end
 	`JALR: FD_disasm_opcode = "JALR    ";
 	`JAL: FD_disasm_opcode = "JAL     ";
-	`SYSTEM: FD_disasm_opcode = "SYSTEM  ";
+	`SYSTEM: begin 
+	   case (UUT.inst_dec.funct3)
+	     3'b001: FD_disasm_opcode = "CSRRW   ";
+	     3'b010: FD_disasm_opcode = "CSRRS   ";
+	     3'b011: FD_disasm_opcode = "CSRRC   ";
+	     3'b101: FD_disasm_opcode = "CSRRWI  ";
+	     3'b110: FD_disasm_opcode = "CSRRSI  ";
+	     3'b111: FD_disasm_opcode = "CSRRCI  ";
+	     default: FD_disasm_opcode = "SYSTEM  ";
+	   endcase
+	end
 	default: FD_disasm_opcode = "ILLEGAL ";
       endcase
    end
@@ -222,6 +232,50 @@ module core_tb();
 	 end
       end	 
    endtask //
+
+   // Test 5: JAL/JALR
+   task run_test5;
+      integer 	    i;
+      begin
+	 $display("(TT) --------------------------------------------------");
+	 $display("(TT) Test 5: JAL/JALR Test ");
+	 $display("(TT) 1. Waveform must be inspected");
+	 $display("(TT) 2. PC=00,0C,18,10,1C,14,0C,18,10,1C,...");
+	 $display("(TT) 3. x1=XX,XX,XX,10,10,14,20,20,10,10,...");
+	 $display("(TT) --------------------------------------------------");
+
+	 load_program("tb_out/05-jalr.bin");
+	 hard_reset();
+	 for (i=0; i<16; i=i+1) begin
+	    $display("(TT) Opcode=%0s, FD_PC=0x%h, x1=0x%h", 
+		     FD_disasm_opcode, UUT.FD_PC, UUT.RF.data[1]);
+	    @(posedge clk_tb);
+	 end
+      end	 
+   endtask //
+
+   // Test 6: CSR
+   task run_test6;
+      integer 	    i;
+      begin
+	 $display("(TT) --------------------------------------------------");
+	 $display("(TT) Test 6: CSRR Test ");
+	 $display("(TT) 1. On failure, a message is displayed");
+	 $display("(TT) 2. Failure vector is PC=0x10");
+	 $display("(TT) --------------------------------------------------");
+
+	 load_program("tb_out/06-csrr.bin");
+	 hard_reset();
+	 for (i=0; i<48; i=i+1) begin
+	    // $display("(TT) Opcode=%0s, FD_PC=0x%h, x1=0x%h", 
+	    // 	     FD_disasm_opcode, UUT.FD_PC, UUT.RF.data[1]);
+	    if (UUT.FD_PC == 32'h10 || FD_disasm_opcode == "ILLEGAL ")
+	      $display("(TT) Test failed!");
+	    @(posedge clk_tb);
+	 end
+	 $display("(TT) Test 6 passed!");
+      end
+   endtask //
    
    assign im_data_tb = instruction_memory_tb[im_addr_out_tb[11:2]];
    assign io_data_read_tb = io_memory_tb[io_addr_tb[7:2]];
@@ -256,11 +310,13 @@ module core_tb();
 
 	@(posedge clk_tb);
 
-	run_test0();
-	run_test1();
-	run_test2();
-	run_test3();
-	run_test4();
+	// run_test0();
+	// run_test1();
+	// run_test2();
+	// run_test3();
+	// run_test4();
+	// run_test5();
+	run_test6();
 
 	$finish;
 	

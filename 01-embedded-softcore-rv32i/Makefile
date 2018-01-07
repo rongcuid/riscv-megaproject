@@ -28,6 +28,16 @@ TEST_PROGRAMS+=tb_out/01-opimm.bin
 TEST_PROGRAMS+=tb_out/02-op.bin
 TEST_PROGRAMS+=tb_out/03-br.bin
 TEST_PROGRAMS+=tb_out/04-lui.bin
+TEST_PROGRAMS+=tb_out/05-jalr.bin
+TEST_PROGRAMS+=tb_out/06-csrr.bin
+TEST_PROGRAMS+=tb_out/07-csrwi.bin
+# TEST_PROGRAMS+=tb_out/08-csrw.bin
+# TEST_PROGRAMS+=tb_out/09-csrsi.bin
+# TEST_PROGRAMS+=tb_out/10-csrs.bin
+# TEST_PROGRAMS+=tb_out/11-csrci.bin
+# TEST_PROGRAMS+=tb_out/12-csrc.bin
+# TEST_PROGRAMS+=tb_out/13-csrex.bin
+
 
 run_core_tb: compile_core_tb $(TEST_PROGRAMS)
 	vvp tb_out/cpu_top_tb -lxt2

@@ -56,6 +56,7 @@ module instruction_decoder
 	`LOAD: instr_IURJBS = 6'b100000;
 	`MISC_MEM: instr_IURJBS = 6'b100000;
 	`OP_IMM: instr_IURJBS = 6'b100000;
+	`SYSTEM: instr_IURJBS = 6'b100000;
 	// U-Types
 	`LUI: instr_IURJBS = 6'b010000;
 	`AUIPC: instr_IURJBS = 6'b010000;
@@ -375,28 +376,34 @@ module instruction_decoder
 		endcase // case (funct7)
 	     end
 	     3'b001: begin : CSRRW
+		regwrite = 1'b1;
 		csr_read = 1'b1;
 		csr_write = 1'b1;
 	     end
 	     3'b010: begin : CSRRS
+		regwrite = 1'b1;
 		csr_read = 1'b1;
 		csr_set = 1'b1;
 	     end
 	     3'b011: begin : CSRRC
+		regwrite = 1'b1;
 		csr_read = 1'b1;
 		csr_clear = 1'b1;
 	     end
 	     3'b101: begin : CSRRWI
+		regwrite = 1'b1;
 		csr_read = 1'b1;
 		csr_write = 1'b1;
 		csr_imm = 1'b1;
 	     end
 	     3'b110: begin : CSRRSI
+		regwrite = 1'b1;
 		csr_read = 1'b1;
 		csr_set = 1'b1;
 		csr_imm = 1'b1;
 	     end
 	     3'b111: begin : CSRRCI
+		regwrite = 1'b1;
 		csr_read = 1'b1;
 		csr_clear = 1'b1;
 		csr_imm = 1'b1;
