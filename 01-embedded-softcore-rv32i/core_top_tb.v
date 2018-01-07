@@ -473,11 +473,11 @@ module core_tb();
 	 load_program("tb_out/15-exception.bin");
 	 hard_reset();
 	 for (i=0; i<256; i=i+1) begin
-	    $display("(TT) Op=%0s, PC=0x%h, x1=0x%h, x6=0x%h, x7=0x%h", 
-	    	     FD_disasm_opcode, UUT.FD_PC,
-		     UUT.RF.data[1],
-		     UUT.RF.data[6],
-		     UUT.RF.data[7]);
+	    // $display("(TT) Op=%0s, PC=0x%h, x1=0x%h, x6=0x%h, x7=0x%h", 
+	    // 	     FD_disasm_opcode, UUT.FD_PC,
+	    // 	     UUT.RF.data[1],
+	    // 	     UUT.RF.data[6],
+	    // 	     UUT.RF.data[7]);
 	    if (UUT.FD_PC == 32'h10 || FD_disasm_opcode == "ILLEGAL ")
 	      $display("(TT) Test failed!");
 	    @(posedge clk_tb);
