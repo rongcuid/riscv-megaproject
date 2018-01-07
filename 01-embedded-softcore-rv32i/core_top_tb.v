@@ -254,7 +254,7 @@ module core_tb();
       end	 
    endtask //
 
-   // Test 6: CSR
+   // Test 6: CSRR
    task run_test6;
       integer 	    i;
       begin
@@ -273,7 +273,28 @@ module core_tb();
 	      $display("(TT) Test failed!");
 	    @(posedge clk_tb);
 	 end
-	 $display("(TT) Test 6 passed!");
+      end
+   endtask //
+
+   // Test 7: CSRWI
+   task run_test7;
+      integer 	    i;
+      begin
+	 $display("(TT) --------------------------------------------------");
+	 $display("(TT) Test 7: CSRWI Test ");
+	 $display("(TT) 1. On failure, a message is displayed");
+	 $display("(TT) 2. Failure vector is PC=0x10");
+	 $display("(TT) --------------------------------------------------");
+
+	 load_program("tb_out/07-csrwi.bin");
+	 hard_reset();
+	 for (i=0; i<48; i=i+1) begin
+	    // $display("(TT) Opcode=%0s, FD_PC=0x%h, x1=0x%h", 
+	    // 	     FD_disasm_opcode, UUT.FD_PC, UUT.RF.data[1]);
+	    if (UUT.FD_PC == 32'h10 || FD_disasm_opcode == "ILLEGAL ")
+	      $display("(TT) Test failed!");
+	    @(posedge clk_tb);
+	 end
       end
    endtask //
    
@@ -316,7 +337,8 @@ module core_tb();
 	// run_test3();
 	// run_test4();
 	// run_test5();
-	run_test6();
+	// run_test6();
+	run_test7();
 
 	$finish;
 	

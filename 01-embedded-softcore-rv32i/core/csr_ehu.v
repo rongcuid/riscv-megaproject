@@ -167,7 +167,7 @@ module csr_ehu
 	   if (really_clear) mcycle[0+:32] <= mcycle[0+:32] & ~operand;
 	end
 	`CSR_MINSTRET: begin
-	   if (really_read) data_out <= mcycle[0+:32];
+	   if (really_read) data_out <= minstret[0+:32];
 	   if (really_write) minstret[0+:32] <= operand;
 	   if (really_set) minstret[0+:32] <= minstret[0+:32] | operand;
 	   if (really_clear) minstret[0+:32] <= minstret[0+:32] & ~operand;
@@ -179,7 +179,7 @@ module csr_ehu
 	   if (really_clear) mcycle[32+:32] <= mcycle[32+:32] & ~operand;
 	end
 	`CSR_MINSTRETH: begin
-	   if (really_read) data_out <= mcycle[32+:32];
+	   if (really_read) data_out <= minstret[32+:32];
 	   if (really_write) minstret[32+:32] <= operand;
 	   if (really_set) minstret[32+:32] <= minstret[32+:32] | operand;
 	   if (really_clear) minstret[32+:32] <= minstret[32+:32] & ~operand;
