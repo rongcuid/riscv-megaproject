@@ -34,7 +34,7 @@ TEST_PROGRAMS+=tb_out/07-csrwi.bin
 TEST_PROGRAMS+=tb_out/08-csrw.bin
 TEST_PROGRAMS+=tb_out/09-csrsi.bin
 TEST_PROGRAMS+=tb_out/10-csrs.bin
-# TEST_PROGRAMS+=tb_out/11-csrci.bin
+TEST_PROGRAMS+=tb_out/11-csrci.bin
 # TEST_PROGRAMS+=tb_out/12-csrc.bin
 # TEST_PROGRAMS+=tb_out/13-csrex.bin
 
