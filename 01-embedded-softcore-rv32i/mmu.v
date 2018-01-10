@@ -1,5 +1,6 @@
 /*
  MMU with a bank of main memory and an IO port. The MMU is byte-addressable.
+ Access latency is one clock.
  
  Memory Mapping:
  
@@ -8,8 +9,15 @@
  - 0x80000000 - 0x800000FF I/O ports
 
  Exceptions are not generated from MMU
-  
-  */
+
+ Memory Bank Configuration: 4 interleaving banks of 8-bit wide SSP-BRAM
+ 
+ Limitations: 
+ - Data memory port cannot access instruction memory
+ - Instruction memory port can only access instruction memory
+ - Instruction memory is ROM
+
+ */
 
 module mmu(
 	   clk, resetb, dm_we,
@@ -31,74 +39,99 @@ module mmu(
      DEV_IO = 3,
      DEV_UNKN = 4;
 
+   // Clock, reset, data memory write enable
    input wire clk, resetb, dm_we;
+   // IM address, DM address, DM data in
    input wire [31:0] im_addr, dm_addr, dm_di;
+   // DM data byte enable, non-encoded
    input wire [3:0]  dm_be;
+   // DM sign extend or unsigned extend
    input wire 	     is_signed;
+   // IM addr out to ROM
    output wire [11:2] im_addr_out;
+   // IM data from ROM, IO data from IO bank
    input wire [31:0]  im_data, io_data_read;
-   output reg [31:0] io_data_write, dm_do;
-   reg [31:0] 	     dm_do_tmp;
-   output reg [31:0] im_do;
+   // IO data to IO bank, DM data output
+   output reg [31:0]  io_data_write, dm_do;
+   // A temporary register for dm_do
+   reg [31:0] 	      dm_do_tmp;
+   // IM data output
+   output reg [31:0]  im_do;
+   // IO address to IO bank
    output reg [7:0]   io_addr;
-   output reg 	     io_en, io_we;
-
-   reg [31:0] 	     dm_di_shift;
+   // IO enable, IO write enable
+   output reg 	      io_en, io_we;
+   // Shift bytes and half words to correct bank
+   reg [31:0] 	      dm_di_shift;
+   // Address mapped to BRAM address
    reg [WORD_DEPTH_LOG-1:2] ram_addr;
+   // BRAM write enable
    reg 			    ram_we;
+   // BRAM data output
    wire [31:0] 		    ram_do;
+   // BRAM data input
    reg [31:0] 		    ram_di;
+   // Selected device
    integer 		    chosen_device_tmp;
+   // Selected device, pipelined
    reg [2:0] 		    chosen_device_p;
+   // DM byte enable, pipelined
    reg [3:0] 		    dm_be_p;
+   // MMU signed/unsigned extend, pipelined
    reg 			    is_signed_p;
+   // IO Read input, IO read input pipelined, IO write output
    reg [31:0] 		    io_data_read_tmp, io_data_read_p, io_data_write_tmp;
+   // IO address
    reg [7:0] 		    io_addr_tmp;
+   // IO enable, IO write enable
    reg 			    io_en_tmp, io_we_tmp;
 
+   // In this implementaion, the IM ROM address is simply the 11:2 bits of IM address input
    assign im_addr_out[11:2] = im_addr[11:2];
 
+   // BRAM bank in interleaved configuration
    BRAM_SSP  #(
-       .DEPTH(WORD_DEPTH>>2), .DEPTH_LOG(WORD_DEPTH_LOG-2), .WIDTH(8)
-       ) ram0 (
-   	    .clk(clk), .we(ram_we), .en(dm_be[0]), 
-   	    .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
-   	    .di(ram_di[0+:8]), .do(ram_do[0+:8])
-   	    );
+	       .DEPTH(WORD_DEPTH>>2), .DEPTH_LOG(WORD_DEPTH_LOG-2), .WIDTH(8)
+	       ) ram0 (
+   		       .clk(clk), .we(ram_we), .en(dm_be[0]), 
+   		       .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
+   		       .di(ram_di[0+:8]), .do(ram_do[0+:8])
+   		       );
    BRAM_SSP 
      #(
        .DEPTH(WORD_DEPTH>>2), .DEPTH_LOG(WORD_DEPTH_LOG-2), .WIDTH(8)
        )
    ram1 (
-   	    .clk(clk), .we(ram_we), .en(dm_be[1]), 
-   	    .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
-   	    .di(ram_di[8+:8]), .do(ram_do[8+:8])
-    );
+   	 .clk(clk), .we(ram_we), .en(dm_be[1]), 
+   	 .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
+   	 .di(ram_di[8+:8]), .do(ram_do[8+:8])
+	 );
    BRAM_SSP
      #(
        .DEPTH(WORD_DEPTH>>2), .DEPTH_LOG(WORD_DEPTH_LOG-2), .WIDTH(8)
        )
    ram2 (
-   	    .clk(clk), .we(ram_we), .en(dm_be[2]), 
-   	    .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
-   	    .di(ram_di[16+:8]), .do(ram_do[16+:8])
-   	    );
+   	 .clk(clk), .we(ram_we), .en(dm_be[2]), 
+   	 .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
+   	 .di(ram_di[16+:8]), .do(ram_do[16+:8])
+   	 );
    BRAM_SSP
      #(
        .DEPTH(WORD_DEPTH>>2), .DEPTH_LOG(WORD_DEPTH_LOG-2), .WIDTH(8)
        )
    ram3 (
-   	    .clk(clk), .we(ram_we), .en(dm_be[3]), 
-   	    .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
-   	    .di(ram_di[24+:8]), .do(ram_do[24+:8])
-   	    );
+   	 .clk(clk), .we(ram_we), .en(dm_be[3]), 
+   	 .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
+   	 .di(ram_di[24+:8]), .do(ram_do[24+:8])
+   	 );
 
+   // The MMU pipeline
    always @ (posedge clk, negedge resetb) begin : MMU_PIPELINE
       if (!resetb) begin
 	 chosen_device_p <= 2'bX;
 	 is_signed_p <= 1'bX;
 	 dm_be_p <= 4'b0;
-	 // NOP
+	 // First instruction is initialized as NOP
 	 im_do <= 32'b0000_0000_0000_00000_000_00000_0010011;
 	 io_data_write <= 32'bX;
 	 io_en <= 1'b0;
@@ -106,7 +139,7 @@ module mmu(
 	 io_addr <= 8'bX;
       end
       else if (clk) begin
-	 // Notice the pipeline
+	 // Notice the pipeline. The naming is a bit inconsistent
 	 dm_be_p <= dm_be;
 	 chosen_device_p <= chosen_device_tmp;
 	 is_signed_p <= is_signed;
@@ -119,6 +152,8 @@ module mmu(
    end
 
    reg [31:0] 		    ram_addr_temp, io_addr_temp;
+   // Device mapping from address
+   // Note: X-Optimism might be a problem. Convert to Tertiary to fix
    always @ (*) begin : DM_ADDR_MAP
       ram_addr_temp = dm_addr - 32'h10000000;
       io_addr_temp = dm_addr - 32'h80000000;
@@ -151,32 +186,36 @@ module mmu(
       end
    end // block: DM_ADDR_MAP
    
+   // Shifting input byte/halfword to correct position
+   // Note: X-Optimism might be a problem. Convert to Tertiary to fix   
    always @ (*) begin : DM_IN_SHIFT
       dm_di_shift = 32'bX;
       // Byte enable
       if (dm_be == 4'b1111) begin
-   	dm_di_shift = dm_di;
+   	 dm_di_shift = dm_di;
       end
       else if (dm_be == 4'b1100) begin
-   	dm_di_shift[16+:16] = dm_di[0+:16];
+   	 dm_di_shift[16+:16] = dm_di[0+:16];
       end
       else if (dm_be == 4'b0011) begin
-   	dm_di_shift[0+:16] = dm_di[0+:16];
+   	 dm_di_shift[0+:16] = dm_di[0+:16];
       end
       else if (dm_be == 4'b0001) begin
-   	dm_di_shift[0+:8] = dm_di[0+:8];
+   	 dm_di_shift[0+:8] = dm_di[0+:8];
       end
       else if (dm_be == 4'b0010) begin
-   	dm_di_shift[8+:8] = dm_di[0+:8];
+   	 dm_di_shift[8+:8] = dm_di[0+:8];
       end
       else if (dm_be == 4'b0100) begin
-   	dm_di_shift[16+:8] = dm_di[0+:8];
+   	 dm_di_shift[16+:8] = dm_di[0+:8];
       end
       else if (dm_be == 4'b1000) begin
-   	dm_di_shift[24+:8] = dm_di[0+:8];
+   	 dm_di_shift[24+:8] = dm_di[0+:8];
       end
    end // block: DM_IN_SHIFT
    
+   // Shifting byte/halfword to correct output position
+   // Note: X-Optimism might be a problem. Convert to Tertiary to fix
    always @ (*) begin : DM_OUT_SHIFT
       case (chosen_device_p)
    	DEV_DM:
@@ -189,43 +228,43 @@ module mmu(
       // Byte enable
       dm_do = 32'bX;
       if (dm_be_p == 4'b1111) begin
-   	dm_do = dm_do_tmp;
+   	 dm_do = dm_do_tmp;
       end
       else if (dm_be_p == 4'b1100) begin
-   	if (is_signed_p)
-   	  dm_do = {{16{dm_do_tmp[31]}}, dm_do_tmp[16+:16]};
-   	else
-   	  dm_do = {16'b0, dm_do_tmp[16+:16]};
+   	 if (is_signed_p)
+   	   dm_do = {{16{dm_do_tmp[31]}}, dm_do_tmp[16+:16]};
+   	 else
+   	   dm_do = {16'b0, dm_do_tmp[16+:16]};
       end
       else if (dm_be_p == 4'b0011) begin
-   	if (is_signed_p)
-   	  dm_do = {{16{dm_do_tmp[15]}}, dm_do_tmp[0+:16]};
-   	else
-   	  dm_do = {16'b0, dm_do_tmp[0+:16]};
+   	 if (is_signed_p)
+   	   dm_do = {{16{dm_do_tmp[15]}}, dm_do_tmp[0+:16]};
+   	 else
+   	   dm_do = {16'b0, dm_do_tmp[0+:16]};
       end
       else if (dm_be_p == 4'b0001) begin
-   	if (is_signed_p)
-   	  dm_do = {{24{dm_do_tmp[7]}}, dm_do_tmp[0+:8]};
-   	else
-   	  dm_do = {24'b0, dm_do_tmp[0+:8]};
+   	 if (is_signed_p)
+   	   dm_do = {{24{dm_do_tmp[7]}}, dm_do_tmp[0+:8]};
+   	 else
+   	   dm_do = {24'b0, dm_do_tmp[0+:8]};
       end
       else if (dm_be_p == 4'b0010) begin
-   	if (is_signed_p)
-   	  dm_do = {{24{dm_do_tmp[15]}}, dm_do_tmp[8+:8]};
-   	else
-   	  dm_do = {24'b0, dm_do_tmp[8+:8]};
+   	 if (is_signed_p)
+   	   dm_do = {{24{dm_do_tmp[15]}}, dm_do_tmp[8+:8]};
+   	 else
+   	   dm_do = {24'b0, dm_do_tmp[8+:8]};
       end
       else if (dm_be_p == 4'b0100) begin
-   	if (is_signed_p)
-   	  dm_do = {{24{dm_do_tmp[23]}}, dm_do_tmp[16+:8]};
-   	else
-   	  dm_do = {24'b0, dm_do_tmp[16+:8]};
+   	 if (is_signed_p)
+   	   dm_do = {{24{dm_do_tmp[23]}}, dm_do_tmp[16+:8]};
+   	 else
+   	   dm_do = {24'b0, dm_do_tmp[16+:8]};
       end
       else if (dm_be_p == 4'b1000) begin
-   	if (is_signed_p)
-   	  dm_do = {{24{dm_do_tmp[31]}}, dm_do_tmp[24+:8]};
-   	else
-   	  dm_do = {24'b0, dm_do_tmp[24+:8]};
+   	 if (is_signed_p)
+   	   dm_do = {{24{dm_do_tmp[31]}}, dm_do_tmp[24+:8]};
+   	 else
+   	   dm_do = {24'b0, dm_do_tmp[24+:8]};
       end
    end
    

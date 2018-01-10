@@ -1,5 +1,5 @@
 /*
- Top module of CPU core
+ Top module of CPU core. Connects the core and MMU
  */
 module core_top
   (

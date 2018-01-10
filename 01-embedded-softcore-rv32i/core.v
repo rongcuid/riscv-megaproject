@@ -17,7 +17,7 @@
  - Two-stage pipeline
  - S1: Fetch/Decode (FD)
  - S2: Execute/Writeback (XB)
- - Branch in FD
+ - Early branch in FD
  */
 module core
   (
@@ -126,9 +126,13 @@ module core
       .exception_store_misaligned(FD_exception_store_misaligned)
       );
 
+   // Next PC for Branches
    reg [31:0]  nextPC_br;
+   // Successful branch
    reg 	       do_branch;
    always @ (*) begin : PC_UPDATE
+      // Successful branch: FD instruction is branch and condition
+      // match
       do_branch = FD_br == 1'b0 ? 1'b0
 		  :
 		  (
@@ -146,6 +150,10 @@ module core
 		   )
 		    ? 1'b1 : 1'b0;
 
+      // Update PC. Priority from high to low:
+      //
+      // Illegal Instruction Exception, Misaligned Exception, MRET,
+      // Branch, Jump, Jump Register, Increment
       nextPC = (FD_initiate_illinst) ? `VEC_ILLEGAL_INST
 	       : (FD_initiate_misaligned) ? `VEC_MISALIGNED
 	       : (FD_pc_update & FD_pc_mepc) ? CSR_mepc + 32'h4
@@ -156,64 +164,9 @@ module core
       FD_exception_instruction_misaligned = nextPC[1:0] != 2'b00;
       
       im_addr = nextPC;
-      //// Commented for removing X-optimism
-      // nextPC = FD_PC + 32'h4;
-      // // So that the first address is 0x0 on reset
-      // if (resetb) begin
-      // 	 if (FD_initiate_illinst) begin
-      // 	    nextPC = `VEC_ILLEGAL_INST;
-      // 	 end
-      // 	 else if (FD_initiate_misaligned) begin
-      // 	    nextPC = `VEC_MISALIGNED;
-      // 	 end
-      // 	 else if (FD_pc_update) begin : WRITE_PC
-      // 	    if (FD_pc_mepc) begin : MRET
-      // 	       nextPC = CSR_mepc;
-      // 	    end
-      // 	    else if (FD_pc_imm) begin : AUIPC
-      // 	       nextPC = FD_imm + FD_PC;
-      // 	    end
-      // 	 end
-      // 	 else if (FD_br) begin : BRANCH
-      // 	    case (FD_funct3)
-      // 	      3'b000: begin : BEQ
-      // 		 if (FD_d_rs1 == FD_d_rs2) nextPC = FD_imm + FD_PC;
-      // 	      end
-      // 	      3'b001: begin : BNE
-      // 		 if (FD_d_rs1 != FD_d_rs2) nextPC = FD_imm + FD_PC;
-      // 	      end
-      // 	      3'b100: begin : BLT
-      // 		 if ($signed(FD_d_rs1) < $signed(FD_d_rs2)) 
-      // 		   nextPC = FD_imm + FD_PC;
-      // 	      end
-      // 	      3'b101: begin : BGE
-      // 		 if ($signed(FD_d_rs1) >= $signed(FD_d_rs2)) 
-      // 		   nextPC = FD_imm + FD_PC;
-      // 	      end
-      // 	      3'b110: begin : BLTU
-      // 		 if ($unsigned(FD_d_rs1) < $unsigned(FD_d_rs2)) 
-      // 		   nextPC = FD_imm + FD_PC;
-      // 	      end
-      // 	      3'b111: begin : BGEU
-      // 		 if ($unsigned(FD_d_rs1) >= $unsigned(FD_d_rs2)) 
-      // 		   nextPC = FD_imm + FD_PC;
-      // 	      end
-      // 	    endcase
-      // 	 end // block: BRANCH
-      // 	 else if (FD_jump) begin : JAL
-      // 	    nextPC = FD_PC + FD_imm;
-      // 	 end
-      // 	 else if (FD_jr) begin : JR
-      // 	    nextPC = FD_aluout;
-      // 	 end
-      // 	 FD_exception_instruction_misaligned = 1'b0;
-      // 	 if (nextPC[1:0] != 2'b00) begin
-      // 	    FD_exception_instruction_misaligned = 1'b1;
-      // 	 end
-      // end // if (resetb)
-      
    end
 
+   // Update the Program Counter
    always @ (posedge clk, negedge resetb) begin : PROGRAM_COUNTER
       if (!resetb) begin
 	 FD_PC <= 32'hFFFFFFFC;
@@ -222,9 +175,11 @@ module core
 	 FD_PC <= nextPC;
       end // if (clk)
    end
-
+   
+   // FD stage ALU, used in PC update and MMU address
    assign FD_aluout = FD_d_rs1 + FD_imm;
 
+   // Register file
    regfile RF(
 	      .clk(clk), .resetb(resetb),
 	      .a_rs1(FD_a_rs1), .d_rs1(FD_d_rs1),
@@ -232,18 +187,21 @@ module core
 	      .a_rd(XB_a_rd), .d_rd(XB_d_rd), .we_rd(XB_regwrite)
 	      );
 
-
+   // Main ALU in XB stage
    always @ (*) begin : XB_ALU
+      // Select operator 1
       case (XB_aluop1_sel)
 	`ALUOP1_RS1: XB_aluop1 = XB_d_rs1;
 	`ALUOP1_PC: XB_aluop1 = XB_PC;
 	default: XB_aluop1 = 32'bX;
-      endcase
+      endcase // case (XB_aluop1_sel)
+      // Select operator 2
       case (XB_aluop2_sel)
 	`ALUOP2_RS2: XB_aluop2 = XB_d_rs2;
 	`ALUOP2_IMM: XB_aluop2 = XB_imm;
 	default: XB_aluop2 = 32'bX;
       endcase // case (XB_aluop2_sel)
+      // ALU operation
       case (XB_alu_op)
 	`ALU_ADD: begin
 	   XB_aluout = XB_aluop1 + XB_aluop2;
@@ -279,7 +237,8 @@ module core
       endcase // case (XB_alu_op)
    end // block: XB_ALU
 
-   
+   // Here, the naming is confusing because the signals are actually
+   // in FD stage, due to the internally pipelined CSR_EHU module
    assign XB_csr_read = FD_bubble ? 1'b0 : FD_csr_read;
    assign XB_csr_write = FD_bubble ? 1'b0 : FD_csr_write;
    assign XB_csr_set = FD_bubble ? 1'b0 : FD_csr_set;
@@ -305,38 +264,25 @@ module core
 
    // Writeback path select
    always @ (*) begin : XB_Writeback_Path
+      // MemToReg: Load memory to register
+      // csr_writeback: CSR to register
       XB_d_rd = XB_memtoreg ? dm_do
 		: XB_csr_writeback ? XB_csr_out
 		: XB_aluout;
-      // // Commented to remove X optimism
-      // XB_d_rd = 32'bX;
-      // if (XB_memtoreg) begin
-      // 	 XB_d_rd = dm_do;
-      // end
-      // else if (XB_csr_read) begin
-      // 	 XB_d_rd = XB_csr_out;
-      // end
-      // else begin
-      // 	 XB_d_rd = XB_aluout;
-      // end
    end
 
-   assign FD_aluout = FD_d_rs1 + FD_imm;
-   
    // MMU Interface
    assign dm_addr = FD_aluout;
    assign dm_di = FD_d_rs2;
-   
+
+   // Flush instructions on exception
    assign FD_bubble = FD_initiate_illinst | FD_initiate_misaligned;
+   // The main pipeline
    always @ (posedge clk, negedge resetb) begin : CORE_PIPELINE
       if (!resetb) begin
 	 // Initialize stage registers with side effects
 	 XB_regwrite <= 1'b0;
 	 XB_csr_writeback <= 1'b0;
-	 // XB_csr_read <= 1'b0;
-	 // XB_csr_write <= 1'b0;
-	 // XB_csr_set <= 1'b0;
-	 // XB_csr_clear <= 1'b0;
 	 XB_FD_exception_unsupported_category <= 1'b0;
 	 XB_FD_exception_illegal_instruction <= 1'b0;
 	 XB_FD_exception_instruction_misaligned <= 1'b0;
@@ -363,6 +309,7 @@ module core
 	    XB_d_rs2 <= FD_d_rs2;
 	 end
 	 else begin
+	    // If Linking, the operation is PC + 4
 	    XB_d_rs1 <= FD_PC;
 	    XB_d_rs2 <= 32'h4;
 	 end
@@ -379,6 +326,8 @@ module core
 	 //// Side effect signals
 	 XB_bubble <= FD_bubble;
 	 if (!FD_bubble) begin
+	    // Side effect signals propagate only if instruction is
+	    // not a bubble
 	    XB_csr_writeback <= XB_csr_read;
 	    XB_regwrite <= FD_regwrite;
 	    XB_FD_exception_unsupported_category 

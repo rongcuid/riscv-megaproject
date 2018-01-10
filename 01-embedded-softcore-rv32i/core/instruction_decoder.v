@@ -1,5 +1,9 @@
 /*
  This module is the RV32I instruction decoder
+
+ The Instruction Decoder takes the current instruction as input,
+ outputs necessary control signals and data items. It may raise
+ exceptions including Illegal Instruction, and Load/Store misaligned.
  */
 module instruction_decoder
   (
@@ -22,32 +26,51 @@ module instruction_decoder
    );
 `include "core/aluop.vh"
 `include "core/opcode.vh"
+   // The instruction to be decoded
    input wire [31:0] inst;
+   // Immediate value
    output [31:0]     immediate;
+   // Signed/Unsigned operation for XB ALU
    output 	     alu_is_signed;
+   // Select XB ALU: Operator 1, Operator 2, Operation
    output [31:0]     aluop1_sel, aluop2_sel, alu_op;
+   // Whether special PC update is needed, whether update pc with MEPC
    output 	     pc_update, pc_mepc;
+   // Whether a writeback is needed in XB
    output 	     regwrite;
+   // The instruction needs to Jump, Link, or Jump Register
    output 	     jump, link, jr;
+   // The instruction is Branch
    output 	     br;
+   // Data Memory Byte Enable
    output [3:0]      dm_be;
+   // Data Memory write enable
    output 	     dm_we;
+   // Treat memory item as Signed/Unsigned
    output 	     mem_is_signed;
+   // Control Status Register operations
    output 	     csr_read, csr_write, csr_set, csr_clear, csr_imm;
+   // Register address: RS1, RS2, Rd writeback
    output [4:0]      a_rs1, a_rs2, a_rd;
+   // The funct3 field
    output [2:0]      funct3;
+   // The funct7 field
    output [6:0]      funct7;
+   // This shall be refactored to assert()
    output 	     bug_invalid_instr_format_onehot;
+   // Exceptions to be raised
    output 	     exception_unsupported_category;
    output 	     exception_illegal_instruction;
    output 	     exception_load_misaligned;
    output 	     exception_store_misaligned;
 
+   // Opcode field
    wire [6:0] 	     opcode;
    assign opcode = inst[6:0];
 
-   // Instruction Formats
+   // One-hot encoded instruction format
    reg [5:0] 	     instr_IURJBS;
+   // Logic to identify immediate format using opcode
    always @ (*) begin : INSTRUCTION_FORMAT
       case (opcode[6:2])
 	// I-Types
@@ -73,16 +96,18 @@ module instruction_decoder
       endcase // case (opcode[6:2])
    end // block: INSTRUCTION_FORMAT
 
+   // The immediate value, extended to 32-bit
    reg [31:0] immediate;
+   // Logic to decode immediate value. Read the RISC-V spec Vol. 1 for
+   // details
    always @ (*) begin : IMMEDIATE_DECODE
       case (instr_IURJBS)
 	6'b100000: begin : I_TYPE
+	   // Certain instructions use a different I-immediate format
 	   immediate
-	     = (
-		opcode[6:2] == `OP_IMM
+	     = (opcode[6:2] == `OP_IMM
 		&& 
-		(funct3 == 3'b101 || funct3 == 3'b001)
-		)
+		(funct3 == 3'b101 || funct3 == 3'b001))
 	       ? {27'b0, inst[24:20]}
 	       : {{21{inst[31]}}, inst[30:20]};
 	end
@@ -114,6 +139,7 @@ module instruction_decoder
    reg 	      exception_load_misaligned;
    reg 	      exception_store_misaligned;
    integer    aluop1_sel, aluop2_sel, alu_op;
+   // Logic to generate control signals
    always @ (*) begin : CONTROL_SIG_GENERATOR
       // Default register fields
       a_rs1 = inst[19:15];
@@ -147,6 +173,7 @@ module instruction_decoder
       exception_illegal_instruction = 1'b0;
       exception_load_misaligned = 1'b0;
       exception_store_misaligned = 1'b0;
+      // Decoding opcode. Read the RISC-V Spec Vol 1.
       case (opcode[6:2])
 	`OP_IMM: begin
 	   // Immediate operation
@@ -181,6 +208,8 @@ module instruction_decoder
 	   endcase // case (funct3)
 	end // case: OP_IMM
 	`LUI: begin
+	   // LUI loads immediate into high-20 bits of register 
+	   // Operation is: imm + 0
 	   aluop2_sel = `ALUOP2_IMM;
 	   alu_op = `ALU_ADD;
 	   regwrite = 1'b1;
@@ -188,12 +217,15 @@ module instruction_decoder
 	   a_rs1 = 5'd0;
 	end
 	`AUIPC: begin
+	   // AUIPC loads upper-20 bits of PC, adds immediate, and
+	   // saves into register
 	   regwrite = 1'b1;
 	   aluop1_sel = `ALUOP1_PC;
 	   aluop2_sel = `ALUOP2_IMM;
 	   alu_op = `ALU_ADD;
 	end
 	`OP: begin
+	   // Register-Register integer operation
 	   regwrite = 1'b1;
 	   aluop2_sel = `ALUOP2_RS2;
 	   case (funct3)
@@ -236,6 +268,9 @@ module instruction_decoder
 	   endcase // case (funct3)
 	end
 	`JAL: begin
+	   // Jump and link.  Addition is performed in XB
+	   // stage. Operands are loaded in the Core module, so it
+	   // does not matter here
 	   jump = 1'b1;
 	   link = 1'b1;
 	   regwrite = 1'b1;
@@ -243,6 +278,9 @@ module instruction_decoder
 	   aluop2_sel = `ALUOP2_RS2;
 	end
 	`JALR: begin
+	   // Jump and link register.  Addition is performed in XB
+	   // stage. Operands are loaded in the Core module, so it
+	   // does not matter here
 	   jr = 1'b1;
 	   link = 1'b1;
 	   regwrite = 1'b1;
@@ -250,6 +288,7 @@ module instruction_decoder
 	   aluop2_sel = `ALUOP2_RS2;
 	end
 	`BRANCH: begin
+	   // Branch instructions
 	   br = 1'b1;
 	   case (funct3)
 	     3'b000,3'b001,3'b100,3'b101,3'b110,3'b111: begin
@@ -261,6 +300,7 @@ module instruction_decoder
 	   endcase // case (funct3)
 	end
 	`LOAD: begin
+	   // LW, LH, LB use different byte enables
 	   regwrite = 1'b1;
 	   case (funct3)
 	     3'b000, 3'b100: begin : LB
@@ -299,6 +339,7 @@ module instruction_decoder
 	   endcase // case (funct3)
 	end
 	`STORE: begin
+	   // SW, SH, SB use different byte enables
 	   dm_we = 1'b1;
 	   case (funct3)
 	     3'b000: begin : SB
@@ -346,6 +387,8 @@ module instruction_decoder
 	   // NOP since this core is in order commit
 	end
 	`SYSTEM: begin
+	   // Environment instructions are implemented via software
+	   // trap
 	   case (funct3)
 	     3'b000: begin : ECALL_EBREAK_RET
 		case (funct7)
@@ -358,6 +401,7 @@ module instruction_decoder
 		     exception_illegal_instruction = 1'b1;
 		  end
 		  7'b0011000: begin : MRET
+		     // MRET jumps to MEPC
 		     pc_update = 1'b1;
 		     pc_mepc = 1'b1;
 		  end

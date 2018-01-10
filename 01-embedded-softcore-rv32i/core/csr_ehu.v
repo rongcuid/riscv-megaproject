@@ -1,6 +1,14 @@
 /*
- This module is the CSR register file
+ This module is the CSR register file and Exception Handling Unit
+ 
+ The CSR RF is pipelined.
+ 
+ All exceptions are handled in the XB stage. The naming prefix XB_FD_
+ means an exception originates from FD stage, but currently is in XB
+ stage.
+ 
  */
+
 module csr_ehu
   (
    // Stateful
@@ -19,6 +27,8 @@ module csr_ehu
    );
 `include "core/csrlist.vh"
    input wire clk, resetb, XB_bubble;
+   // CSR read, write, set, clear; imm means operand is an immediate
+   // or from register
    input wire read, write, set, clear, imm;
    input wire [4:0] a_rd;
    input wire [11:0] src_dst;
@@ -39,19 +49,22 @@ module csr_ehu
 
    wire 	      initiate_exception;
    wire 	      FD_exception, XB_exception;
+   // There exists an exception from FD stage
    assign FD_exception = XB_FD_exception_unsupported_category |
    		         XB_FD_exception_illegal_instruction |
    		         XB_FD_exception_instruction_misaligned |
    		         XB_FD_exception_load_misaligned |
    		         XB_FD_exception_store_misaligned;
+   // There exists an exception from XB stage
    assign XB_exception = XB_exception_illegal_instruction;
+   // There exists an exception
    assign initiate_exception = XB_exception | FD_exception;
+   // Output for PC update
    assign csr_mepc = mepc;
 
    // Exception Handling Unit. XB exceptions have higher priority
+   // since XB instruction is senior. XB must not be a bubble
    always @ (*) begin : EXCEPTION_HANDLING_UNIT
-      // initiate_illinst = 1'b0;
-      // initiate_misaligned = 1'b0;
       initiate_illinst
 	= ~XB_bubble & (XB_exception_illegal_instruction |
       			XB_FD_exception_illegal_instruction |
@@ -60,23 +73,15 @@ module csr_ehu
 	= ~XB_bubble & (XB_FD_exception_instruction_misaligned |
       			XB_FD_exception_load_misaligned |
       			XB_FD_exception_store_misaligned);
-      
-      // if (~XB_bubble & (XB_exception_illegal_instruction |
-      // 	  XB_FD_exception_illegal_instruction |
-      // 	  XB_FD_exception_unsupported_category)) begin
-      // 	 initiate_illinst = 1'b1;
-      // end
-      // else if (~XB_bubble & (XB_FD_exception_instruction_misaligned |
-      // 	       XB_FD_exception_load_misaligned |
-      // 	       XB_FD_exception_store_misaligned)) begin
-      // 	 initiate_misaligned = 1'b1;
-      // end
    end
-   
+
+   // The operand to operate on target CSR
    wire [31:0] 	     operand;
    assign operand = imm ? {27'b0, uimm} : d_rs1;
 
    wire 	     really_read, really_write, really_set, really_clear;
+   // If rd/uimm field is 0, then do not perform operation to prevent
+   // side effect
    assign really_read = read && (a_rd != 5'b0);
    assign really_write = write && !(imm && uimm == 5'b0);
    assign really_set = set && (uimm != 5'b0);
@@ -96,6 +101,7 @@ module csr_ehu
 	    // Instruction is committed when it is not a bubble
 	    minstret <= minstret + 64'b1;
 	 end
+	 // CSR register file
 	 case (src_dst)
 	   `CSR_MVENDORID: begin
 	      if (really_read) data_out <= 32'b0;
@@ -110,7 +116,7 @@ module csr_ehu
 	      if (really_read) data_out <= 32'b0;
 	   end
 	   `CSR_MISA: begin
-	      // 32-bit, I
+	      // 32-bit, I subset. Read RISC-V Spec Vol 2
 	      if (really_read) data_out <= 32'b0100_0000_0000_0000_0000_0001_0000_0000;
 	   end
 	   `CSR_MTVEC: begin
@@ -166,6 +172,7 @@ module csr_ehu
 	      if (really_clear) minstret[32+:32] <= minstret[32+:32] & ~operand;
 	   end
 	   default: begin
+	      // Performance monitors are hard wired to 0
 	      if (src_dst[11:4] == 8'hB0 || 
 		  src_dst[11:4] == 8'hB1 ||
 		  src_dst[11:4] == 8'hB8 ||
@@ -176,12 +183,18 @@ module csr_ehu
 		 data_out <= 32'b0;
 	      end
 	      else begin
+		 // Unknown CSR raise exceptions
 		 if (~XB_bubble & (read|write|set|clear))
 		   XB_exception_illegal_instruction = 1'b1;
 	      end // else: !if(src_dst[11:4] == 8'hB0 ||...
 	   end // case: default
 	 endcase // case (src_dst)
+	 // Magic numbers are from RISC-V Spec Vol 2
 	 if (XB_exception) begin
+	    // NOTE: This confusing statement is caused by the
+	    // internal pipeline of the CSR. CSR has one stage
+	    // pipeline, so even though the exception is supposed to
+	    // happen in XB stage, a CSR exception's PC is in FD stage
 	    mepc <= FD_pc;
 	    mcause <= 32'd2; // Illegal Instruction
 	 end
