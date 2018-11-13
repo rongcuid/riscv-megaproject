@@ -1,16 +1,18 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
-module regfile_tb();
+module regfile_tb(clk);
    reg clk_tb, resetb_tb, we_rd_tb;
    reg [4:0] a_rs1_tb, a_rs2_tb, a_rd_tb;
    wire [31:0] d_rs1_tb, d_rs2_tb;
    reg [31:0] d_rd_tb;
+
+   assign clk_tb = clk;
    
-   always begin : CLK_GENERATOR
-      #5 clk_tb = 1'b0;
-      #5 clk_tb = 1'b1;
-   end
+   // always begin : CLK_GENERATOR
+   //    #5 clk_tb = 1'b0;
+   //    #5 clk_tb = 1'b1;
+   // end
 
    // Test 1: writes 16, 15, 14, 13, 12,... to registers x0, x1, x2, x3, x4,...
    // Rs1 and Rs2 reads with delay of 1 and 2 clocks, respectively
