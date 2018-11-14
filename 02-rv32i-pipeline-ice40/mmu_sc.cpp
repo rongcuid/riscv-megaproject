@@ -106,13 +106,14 @@ public:
   void test3(void);
   /** Testing Instruction Memory read.*/
   void test4(void);
+  /** Testing IO read/write.*/
+  void test5(void);
 };
 
 void mmu_tb_t::im_thread()
 {
   while(true) {
     uint32_t addrw32 = im_addr_out_tb.read();
-    std::cout << im_addr_tb << " " << im_addr_out_tb << std::endl;
     uint32_t addrw9 = addrw32 % 1024;
     im_data_tb.write(instruction_memory[addrw9]);
     wait();
@@ -123,7 +124,7 @@ void mmu_tb_t::io_thread()
 {
   while(true) {
     uint32_t addrw32 = io_addr_tb.read();
-    uint32_t addrw6 = addrw32 % 64;
+    uint32_t addrw6 = (addrw32 >> 2) % 64;
     io_data_read_tb.write(io_memory[addrw6]);
     wait();
   }
@@ -132,10 +133,11 @@ void mmu_tb_t::test_thread()
 {
   reset();
 
-  // test1();
-  // test2();
-  // test3();
+  test1();
+  test2();
+  test3();
   test4();
+  test5();
 
   sc_stop();
 }
@@ -290,6 +292,41 @@ void mmu_tb_t::test4()
     wait();
     printf("(TT) im_addr = 0x%x, im_do(prev) = %d\n", 
 	   im_addr_tb.read(), im_do_tb.read());
+  }
+}
+
+void mmu_tb_t::test5()
+{
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 5: IO R/W " << std::endl
+    << "(TT) 1. Writes 0, 1, ... to 0x80000000, ... consecutively in unsigned words" << std::endl
+    << "(TT) 2. The IO port should output the written values with one cycle delay" << std::endl
+    << "(TT) 3. Then IO port is read" << std::endl
+    << "(TT) 4. IO port should read 1024, 1025, ..." << std::endl
+    << "(TT) 5. Ignore the first dm_do(prev) which is invalid" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+  dm_we_tb.write(false);
+  is_signed_tb.write(false);
+  reset();
+  // 1. Write IO
+  dm_we_tb.write(true);
+  for (uint32_t i=0; i<8; ++i) {
+    dm_addr_tb.write(0x80000000 + 4*i);
+    dm_di_tb.write(i);
+    dm_be_tb.write(0b1111);
+    wait();
+    printf("(TT) io_we = %x, io_addr = 0x%x, io_data_write = 0x%x\n",
+	   io_we_tb.read(), io_addr_tb.read(), io_data_write_tb.read());
+  }
+  dm_we_tb.write(false);
+  // 2. Read IO
+  for (uint32_t i=0; i<8; ++i) {
+    dm_addr_tb.write(0x80000000 + 4*i);
+    dm_be_tb.write(0b1111);
+    wait();
+    printf("(TT) dm_addr = 0x%x, dm_be = %x, dm_do(prev) = %d\n", 
+	   dm_addr_tb.read(), dm_be_tb.read(), dm_do_tb.read());
   }
 }
 
