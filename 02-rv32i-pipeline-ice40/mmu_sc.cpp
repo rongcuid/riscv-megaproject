@@ -96,8 +96,11 @@ public:
   void io_thread(void);
   
   void test_thread(void);
-  
+
+  /** Testing Byte read/write.*/
   void test1(void);
+  /** Testing Halfword read/write.*/
+  void test2(void);
 };
 
 void mmu_tb_t::im_thread()
@@ -126,6 +129,7 @@ void mmu_tb_t::test_thread()
   init_memory();
 
   test1();
+  test2();
 
   sc_stop();
 }
@@ -137,7 +141,7 @@ void mmu_tb_t::test1()
     << "(TT) Test 1: Byte R/W " << std::endl
     << "(TT) 1. Writes 0, 1, ... to 0x10000000, ... consecutively in unsigned bytes" << std::endl
     << "(TT) 2. Then reads from the same addresses. Values should be same" << std::endl
-    << "(TT) 3. The first dm_do(prev) is invalid" << std::endl
+    << "(TT) 3. Ignore the first dm_do(prev) which is invalid" << std::endl
     << "(TT) --------------------------------------------------" << std::endl;
   // Reset
   is_signed_tb.write(false);
@@ -183,6 +187,48 @@ void mmu_tb_t::test1()
     printf("(TT) dm_addr = 0x%x, dm_be = %x, dm_do(prev) = %d\n", 
 	   dm_addr_tb.read(), dm_be_tb.read(), dm_do_tb.read());
   }
+}
+
+void mmu_tb_t::test2()
+{
+  printf("(TT) --------------------------------------------------\n");
+  printf("(TT) Test 2: Half Word R/W \n");
+  printf("(TT) 1. Writes 0, 1, ... to 0x10000000, ... consecutively in unsigned half words\n");
+  printf("(TT) 2. Then reads from the same addresses. Values should be same\n");
+  printf("(TT) 3. Ignore the first dm_do(prev) which is invalid\n");
+  printf("(TT) --------------------------------------------------\n");
+
+  // Reset
+  dm_we_tb.write(false);
+  is_signed_tb.write(false);
+  reset();
+
+  // 1. Write halfwords
+  dm_we_tb.write(true);
+  for (uint32_t i=0; i<8; ++i) {
+    dm_addr_tb.write(0x10000000 + 4*i);
+    dm_di_tb.write(2*i + 0);
+    dm_be_tb.write(0b0011);
+    wait();
+    dm_di_tb.write(2*i + 1);
+    dm_be_tb.write(0b1100);
+    wait();
+  }
+  dm_we_tb.write(false);
+  
+  // 2. Read halfwords
+  for (uint32_t i=0; i<8; ++i) {
+    dm_addr_tb.write(0x10000000 + 4*i);
+    dm_be_tb.write(0b0011);
+    wait();
+    printf("(TT) dm_addr = 0x%x, dm_be = %x, dm_do(prev) = %d\n", 
+	   dm_addr_tb.read(), dm_be_tb.read(), dm_do_tb.read());
+    dm_be_tb.write(0b1100);
+    wait();
+    printf("(TT) dm_addr = 0x%x, dm_be = %x, dm_do(prev) = %d\n", 
+	   dm_addr_tb.read(), dm_be_tb.read(), dm_do_tb.read());
+  }
+  
 }
 
 int sc_main(int argc, char** argv)
