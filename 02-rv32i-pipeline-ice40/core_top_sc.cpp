@@ -1,5 +1,7 @@
 #include <systemc.h>
+
 #include <sstream>
+#include <fstream>
 
 #include "Vcore_top.h"
 
@@ -20,6 +22,11 @@ public:
   sc_signal<uint32_t> io_data_read_tb;
   sc_signal<uint32_t> io_data_write_tb;
 
+  sc_signal<sc_bv<256> > FD_disasm_opcode;
+  char disasm[32];
+
+  sc_signal<uint32_t> FD_PC;
+
   sc_signal<uint32_t> instruction_memory_tb[1024];
   sc_signal<uint32_t> io_memory_tb[64];
 
@@ -33,6 +40,8 @@ public:
     , io_we_tb("io_we_tb")
     , io_data_read_tb("io_data_read_tb")
     , io_data_write_tb("io_data_write_tb")
+    , FD_disasm_opcode("FD_disasm_opcode")
+    , FD_PC("FD_PC")
   {
     SC_THREAD(im_thread);
     sensitive << rom_addr_tb;
@@ -64,6 +73,8 @@ public:
     dut->io_we(io_we_tb);
     dut->io_data_read(io_data_read_tb);
     dut->io_data_write(io_data_write_tb);
+    dut->FD_disasm_opcode(FD_disasm_opcode);
+    dut->FD_PC(FD_PC);
   }
 
   ~cpu_top_tb_t()
@@ -85,6 +96,8 @@ public:
   bool load_program(const std::string& path);
 
   void test_thread(void);
+
+  void test0(void);
 };
 
 void cpu_top_tb_t::im_thread()
@@ -107,12 +120,64 @@ void cpu_top_tb_t::io_thread()
   }
 }
 
-bool load_program(const std::string& path)
+bool cpu_top_tb_t::load_program(const std::string& path)
 {
+  ifstream f(path, std::ios::in | std::ios::binary);
+  if (f.is_open()) {
+    std::streampos size;
+    size = f.tellg();
+    if (size % 4 != 0) return false;
+    auto memblock = new char[size];
+    
+    f.read(memblock, size);
+    memcpy(instruction_memory_tb, (uint32_t*) memblock, size/4);
+    
+    f.close();
+    delete[] memblock;
+    return true;
+  }
+  else {
+    return false;
+  }
 }
 
-void cpu_top_tb_t::test_thread() {
+std::string bv_to_opcode(const sc_bv<256>& bv)
+{
+  char buf[32];
+  for (int i=0; i<31; ++i) {
+    buf[i] = bv.range(i*8+7, i*8).to_uint();
+  }
+  std::string op(buf);
+  std::reverse(op.begin(), op.end());
+  return op;
+}
+
+void cpu_top_tb_t::test0()
+{
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 0: NOP and J Test " << std::endl
+    << "(TT) 1. Waveform must be inspected" << std::endl
+    << "(TT) 2. Before reset, PC is at 0xFFFFFFFC." << std::endl
+    << "(TT) 3. Reset PC is 0x0, which then jumps to 0xC." << std::endl
+    << "(TT) 4. Then, increments at steps of 0x4." << std::endl
+    << "(TT) 5. Then, jumps to 0xC after 0x20." << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+  load_program("tb_out/00-nop.bin");
   reset();
+  for (int i=0; i<12; ++i) {
+    std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+	      << ", FD_PC=0x" << std::hex << FD_PC
+	      << std::endl;
+    wait();
+  }
+}
+
+void cpu_top_tb_t::test_thread()
+{
+  reset();
+
+  test0();
 
   sc_stop();
 }
