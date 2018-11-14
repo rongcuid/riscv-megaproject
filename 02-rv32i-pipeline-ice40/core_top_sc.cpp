@@ -38,17 +38,17 @@ public:
     sensitive << rom_addr_tb;
     for (int i=0; i<1024; ++i) {
       std::stringstream ss;
-      // ss << "instruction_memory_" << i;
-      // instruction_memory_tb[i] = sc_signal<uint32_t>(ss.str());
+      ss << "instruction_memory_" << i;
+      instruction_memory_tb[i] = sc_signal<uint32_t>(ss.str().c_str());
       sensitive << instruction_memory_tb[i];
     }
 
     SC_THREAD(io_thread);
     sensitive << io_addr_tb;
     for (int i=0; i<64; ++i) {
-      // std::stringstream ss;
-      // ss << "io_memory_" << i;
-      // io_memory_tb[i] = sc_signal<uint32_t>(ss.str());
+      std::stringstream ss;
+      ss << "io_memory_" << i;
+      io_memory_tb[i] = sc_signal<uint32_t>(ss.str().c_str());
       sensitive << io_memory_tb[i];
     }
 
