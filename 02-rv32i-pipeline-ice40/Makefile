@@ -3,9 +3,8 @@ all: compile_regfile_tb
 
 compile_regfile_tb: regfile.v regfile_sc.cpp
 #	echo "(MM) Compiling Regfile testbench"
-#	iverilog -Wall -o tb_out/regfile_tb $^
-	verilator -Wall --sc $^ --exe -o ../tb_out/regfile_tb
-	make -C obj_dir -f Vregfile.mk
+	verilator --Mdir obj_regfile_tb -Wall --sc $^ --exe -o ../tb_out/regfile_tb
+	make -C obj_regfile_tb -f Vregfile.mk
 
 # run_regfile_tb: compile_regfile_tb
 # 	vvp tb_out/regfile_tb -lxt2

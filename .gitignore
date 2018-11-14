@@ -133,3 +133,4 @@ tb_out/
 tmp/
 
 obj_dir/
+obj_*/
