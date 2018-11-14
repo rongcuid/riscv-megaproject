@@ -45,18 +45,46 @@ public:
 
     SC_THREAD(io_thread);
     sensitive << io_addr_tb;
-    for (int i=0; i<1024; ++i) {
+    for (int i=0; i<64; ++i) {
       // std::stringstream ss;
       // ss << "io_memory_" << i;
       // io_memory_tb[i] = sc_signal<uint32_t>(ss.str());
       sensitive << io_memory_tb[i];
     }
+
+    SC_CTHREAD(test_thread, clk_tb.pos());
+
+    dut = new Vcore_top("dut");
+    dut->clk(clk_tb);
+    dut->resetb(resetb_tb);
+    dut->rom_addr(rom_addr_tb);
+    dut->rom_data(rom_data_tb);
+    dut->io_addr(io_addr_tb);
+    dut->io_en(io_en_tb);
+    dut->io_we(io_we_tb);
+    dut->io_data_read(io_data_read_tb);
+    dut->io_data_write(io_data_write_tb);
+  }
+
+  ~cpu_top_tb_t()
+  {
+    delete dut;
+  }
+
+  void reset()
+  {
+    resetb_tb.write(false);
+    wait();
+    resetb_tb.write(true);
+    wait();
   }
 
   void im_thread(void);
   void io_thread(void);
   
   bool load_program(const std::string& path);
+
+  void test_thread(void);
 };
 
 void cpu_top_tb_t::im_thread()
@@ -77,6 +105,16 @@ void cpu_top_tb_t::io_thread()
     io_data_read_tb.write(io_memory_tb[addrw6].read());
     wait();
   }
+}
+
+bool load_program(const std::string& path)
+{
+}
+
+void cpu_top_tb_t::test_thread() {
+  reset();
+
+  sc_stop();
 }
 
 ////////////////////////
