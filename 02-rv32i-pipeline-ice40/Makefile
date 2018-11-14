@@ -3,15 +3,16 @@ all: compile_mmu_tb
 
 compile_regfile_tb: regfile.v regfile_sc.cpp
 #	echo "(MM) Compiling Regfile testbench"
-	verilator --Mdir obj_regfile_tb -Wall --sc $^ --exe -o ../tb_out/regfile_tb
-	make -C obj_regfile_tb -f Vregfile.mk
+	verilator -Wall --sc $^ --exe -o ../tb_out/regfile_tb
+	make -C obj_dir -f Vregfile.mk
 
 # run_regfile_tb: compile_regfile_tb
 # 	vvp tb_out/regfile_tb -lxt2
 
-compile_mmu_tb: BRAM_SSP.v mmu.v mmu_sc.cpp
+compile_mmu_tb: mmu.v mmu_sc.cpp BRAM_SSP.v 
 	echo "(MM) Compiling MMU testbench"
 	verilator -Wall --sc $^ --exe -o ../tb_out/mmu_tb
+	make -C obj_dir -f Vmmu.mk
 #	iverilog -Wall -o tb_out/mmu_tb $^
 
 # run_mmu_tb: compile_mmu_tb
@@ -45,3 +46,7 @@ compile_mmu_tb: BRAM_SSP.v mmu.v mmu_sc.cpp
 
 # run_core_tb: compile_core_tb $(TEST_PROGRAMS)
 # 	vvp tb_out/cpu_top_tb -lxt2
+
+clean:
+	rm -rf tmp tb_out/* obj_dir
+	find . -name "*~" -exec rm -f {} \;
