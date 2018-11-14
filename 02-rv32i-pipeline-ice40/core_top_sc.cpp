@@ -122,19 +122,32 @@ void cpu_top_tb_t::io_thread()
 
 bool cpu_top_tb_t::load_program(const std::string& path)
 {
-  ifstream f(path, std::ios::in | std::ios::binary);
+  ifstream f(path, std::ios::binary);
   if (f.is_open()) {
-    std::streampos size;
-    size = f.tellg();
+    std::vector<unsigned char> buf
+      (std::istreambuf_iterator<char>(f), {});
+    size_t size = buf.size();
+    if (size == 0) return false;
     if (size % 4 != 0) return false;
-    auto memblock = new char[size];
     
-    f.read(memblock, size);
-    memcpy(instruction_memory_tb, (uint32_t*) memblock, size/4);
-    
+    auto words = (uint32_t*) buf.data();
+    for (int i=0; i<size/4; ++i) {
+      instruction_memory_tb[i].write(words[i]);
+    }
     f.close();
-    delete[] memblock;
     return true;
+    // std::streampos size;
+    // size = f.tellg();
+    // if (size == 0) return false;
+    // if (size % 4 != 0) return false;
+    // auto memblock = new char[size];
+    
+    // f.read(memblock, size);
+    // memcpy(instruction_memory_tb, (uint32_t*) memblock, size/4);
+    
+    // f.close();
+    // delete[] memblock;
+    // return true;
   }
   else {
     return false;
@@ -163,13 +176,17 @@ void cpu_top_tb_t::test0()
     << "(TT) 4. Then, increments at steps of 0x4." << std::endl
     << "(TT) 5. Then, jumps to 0xC after 0x20." << std::endl
     << "(TT) --------------------------------------------------" << std::endl;
-  load_program("tb_out/00-nop.bin");
-  reset();
-  for (int i=0; i<12; ++i) {
-    std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
-	      << ", FD_PC=0x" << std::hex << FD_PC
-	      << std::endl;
-    wait();
+  if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+    for (int i=0; i<12; ++i) {
+      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+		<< ", FD_PC=0x" << std::hex << FD_PC
+		<< std::endl;
+      wait();
+    }
   }
 }
 
