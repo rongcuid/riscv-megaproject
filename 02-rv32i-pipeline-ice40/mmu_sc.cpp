@@ -40,13 +40,15 @@ public:
     , im_do_tb("im_do_tb"), io_addr_tb("io_addr_tb")
     , io_en_tb("io_en_tb"), io_we_tb("io_we_tb")
   {
-    SC_CTHREAD(test_thread, clk_tb.pos());
-
+    init_memory();
+    
     SC_THREAD(im_thread);
     sensitive << im_addr_out_tb;
 
     SC_THREAD(io_thread);
     sensitive << io_addr_tb;
+
+    SC_CTHREAD(test_thread, clk_tb.pos());
 
     dut = new Vmmu("dut");
     dut->clk(clk_tb);
@@ -89,7 +91,6 @@ public:
     for (int i=0; i<64; ++i) {
       io_memory[i] = 1024 + i;
     }
-    wait();
   }
 
   void im_thread(void);
@@ -101,35 +102,40 @@ public:
   void test1(void);
   /** Testing Halfword read/write.*/
   void test2(void);
+  /** Testing Word read/write.*/
+  void test3(void);
+  /** Testing Instruction Memory read.*/
+  void test4(void);
 };
 
 void mmu_tb_t::im_thread()
 {
   while(true) {
-    wait();
-    uint32_t addrb32 = im_addr_out_tb.read();
-    uint32_t addrw9 = (addrb32 >> 2) % 1024;
+    uint32_t addrw32 = im_addr_out_tb.read();
+    std::cout << im_addr_tb << " " << im_addr_out_tb << std::endl;
+    uint32_t addrw9 = addrw32 % 1024;
     im_data_tb.write(instruction_memory[addrw9]);
+    wait();
   }
 }
 
 void mmu_tb_t::io_thread()
 {
   while(true) {
-    wait();
-    uint32_t addrb32 = io_addr_tb.read();
-    uint32_t addrw6 = (addrb32 >> 2) % 64;
+    uint32_t addrw32 = io_addr_tb.read();
+    uint32_t addrw6 = addrw32 % 64;
     io_data_read_tb.write(io_memory[addrw6]);
+    wait();
   }
 }
 void mmu_tb_t::test_thread()
 {
   reset();
 
-  init_memory();
-
-  test1();
-  test2();
+  // test1();
+  // test2();
+  // test3();
+  test4();
 
   sc_stop();
 }
@@ -139,7 +145,7 @@ void mmu_tb_t::test1()
   std::cout
     << "(TT) --------------------------------------------------" << std::endl
     << "(TT) Test 1: Byte R/W " << std::endl
-    << "(TT) 1. Writes 0, 1, ... to 0x10000000, ... consecutively in unsigned bytes" << std::endl
+    << "(TT) 1. Writes 0, 1, ... to *(0x10000000), ... consecutively in unsigned bytes" << std::endl
     << "(TT) 2. Then reads from the same addresses. Values should be same" << std::endl
     << "(TT) 3. Ignore the first dm_do(prev) which is invalid" << std::endl
     << "(TT) --------------------------------------------------" << std::endl;
@@ -193,7 +199,7 @@ void mmu_tb_t::test2()
 {
   printf("(TT) --------------------------------------------------\n");
   printf("(TT) Test 2: Half Word R/W \n");
-  printf("(TT) 1. Writes 0, 1, ... to 0x10000000, ... consecutively in unsigned half words\n");
+  printf("(TT) 1. Writes 0, 1, ... to *(0x10000000), ... consecutively in unsigned half words\n");
   printf("(TT) 2. Then reads from the same addresses. Values should be same\n");
   printf("(TT) 3. Ignore the first dm_do(prev) which is invalid\n");
   printf("(TT) --------------------------------------------------\n");
@@ -230,6 +236,64 @@ void mmu_tb_t::test2()
   }
   
 }
+
+void mmu_tb_t::test3()
+{
+  std::cout 
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 3: Word R/W " << std::endl
+    << "(TT) 1. Writes 0, 1, ... to *(0x10000000), ... consecutively in unsigned words" << std::endl
+    << "(TT) 2. Then reads from the same addresses. Values should be same" << std::endl
+    << "(TT) 3. Ignore the first dm_do(prev) which is invalid" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+
+  // Reset
+  dm_we_tb.write(false);
+  is_signed_tb.write(false);
+  reset();
+
+  // 1. Write halfwords
+  dm_we_tb.write(true);
+  for (uint32_t i=0; i<8; ++i) {
+    dm_addr_tb.write(0x10000000 + 4*i);
+    dm_di_tb.write(i);
+    dm_be_tb.write(0b1111);
+    wait();
+  }
+  dm_we_tb.write(false);
+  
+  // 2. Read halfwords
+  for (uint32_t i=0; i<8; ++i) {
+    dm_addr_tb.write(0x10000000 + 4*i);
+    dm_be_tb.write(0b1111);
+    wait();
+    printf("(TT) dm_addr = 0x%x, dm_be = %x, dm_do(prev) = %d\n", 
+	   dm_addr_tb.read(), dm_be_tb.read(), dm_do_tb.read());
+  }
+  
+}
+
+void mmu_tb_t::test4()
+{
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 4: Read Instruction Memory " << std::endl
+    << "(TT) 1. Reads words from 0x0000000, 0x0000004, ..." << std::endl
+    << "(TT) 2. Read has one cycle delay. Should read 1023, 1022, ..." << std::endl
+    << "(TT) 3. Ignore the first read which is invalid" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+  dm_we_tb.write(false);
+  is_signed_tb.write(false);
+  reset();
+  for (uint32_t i=0; i<8; ++i) {
+    im_addr_tb.write(i*4);
+    wait();
+    printf("(TT) im_addr = 0x%x, im_do(prev) = %d\n", 
+	   im_addr_tb.read(), im_do_tb.read());
+  }
+}
+
+////////////////////////
 
 int sc_main(int argc, char** argv)
 {
