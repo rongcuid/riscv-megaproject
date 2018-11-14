@@ -224,11 +224,28 @@ void cpu_top_tb_t::test1()
 
 void cpu_top_tb_t::test2()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 2: OP Test " << std::endl
+    << "(TT) 1. Waveform must be inspected" << std::endl
+    << "(TT) 2. OP's start at PC=14. x1 has 2 clock delay" << std::endl
+    << "(TT) 3. x1=4,3,1,0,1,0,1,2,4,2,-2,-1,1,0,1" << std::endl
+    << "(TT) 4. Loops to 0x0C at 50" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+
+ if (!load_program("tb_out/02-op.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+    for (int i=0; i<24; ++i) {
+      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+		<< ", FD_PC=0x" << std::hex << FD_PC
+		<< ", x1 = " << std::dec
+		<< static_cast<int32_t>(dut->core_top->CPU0->RF->data[1])
+		<< std::endl;
+      wait();
+    }
   }
 }
 void cpu_top_tb_t::test3()
