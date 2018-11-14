@@ -18,7 +18,7 @@ module instruction_decoder
    csr_read, csr_write, csr_set, csr_clear, csr_imm,
    a_rs1, a_rs2, a_rd, funct3, funct7,
    // Exceptions
-   bug_invalid_instr_format_onehot,
+   // bug_invalid_instr_format_onehot,
    exception_unsupported_category,
    exception_illegal_instruction,
    exception_load_misaligned,
@@ -57,7 +57,7 @@ module instruction_decoder
    // The funct7 field
    output [6:0]      funct7;
    // This shall be refactored to assert()
-   output 	     bug_invalid_instr_format_onehot;
+   // output 	     bug_invalid_instr_format_onehot;
    // Exceptions to be raised
    output 	     exception_unsupported_category;
    output 	     exception_illegal_instruction;
@@ -65,13 +65,16 @@ module instruction_decoder
    output 	     exception_store_misaligned;
 
    // Opcode field
+   /* verilator lint_off UNUSED */
    wire [6:0] 	     opcode;
+   /* verilator lint_on UNUSED */
    assign opcode = inst[6:0];
 
    // One-hot encoded instruction format
    reg [5:0] 	     instr_IURJBS;
    // Logic to identify immediate format using opcode
    always @ (*) begin : INSTRUCTION_FORMAT
+      /* verilator lint_off CASEOVERLAP */
       case (opcode[6:2])
 	// I-Types
 	`OP_IMM: instr_IURJBS = 6'b100000;
@@ -94,6 +97,7 @@ module instruction_decoder
 	// Unsupported
 	default: instr_IURJBS = 6'bX;
       endcase // case (opcode[6:2])
+      /* verilator lint_on CASEOVERLAP */
    end // block: INSTRUCTION_FORMAT
 
    // The immediate value, extended to 32-bit
