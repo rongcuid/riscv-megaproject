@@ -4,6 +4,9 @@
 #include <fstream>
 
 #include "Vcore_top.h"
+#include "Vcore_top_core_top.h"
+#include "Vcore_top_core.h"
+#include "Vcore_top_regfile.h"
 
 class cpu_top_tb_t : public sc_module
 {
@@ -98,6 +101,21 @@ public:
   void test_thread(void);
 
   void test0(void);
+  void test1(void);
+  void test2(void);
+  void test3(void);
+  void test4(void);
+  void test5(void);
+  void test6(void);
+  void test7(void);
+  void test8(void);
+  void test9(void);
+  void test10(void);
+  void test11(void);
+  void test12(void);
+  void test13(void);
+  void test14(void);
+  void test15(void);
 };
 
 void cpu_top_tb_t::im_thread()
@@ -136,18 +154,6 @@ bool cpu_top_tb_t::load_program(const std::string& path)
     }
     f.close();
     return true;
-    // std::streampos size;
-    // size = f.tellg();
-    // if (size == 0) return false;
-    // if (size % 4 != 0) return false;
-    // auto memblock = new char[size];
-    
-    // f.read(memblock, size);
-    // memcpy(instruction_memory_tb, (uint32_t*) memblock, size/4);
-    
-    // f.close();
-    // delete[] memblock;
-    // return true;
   }
   else {
     return false;
@@ -190,11 +196,179 @@ void cpu_top_tb_t::test0()
   }
 }
 
+void cpu_top_tb_t::test1()
+{
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 1: OP-IMM Test " << std::endl
+    << "(TT) 1. Waveform must be inspected" << std::endl
+    << "(TT) 2. OP-IMM's start at PC=10, depositing x1 in XB stage" << std::endl
+    << "(TT) 3. x1=1,2,3,4,5,6,1,2,1,0,1,-1,-1" << std::endl
+    << "(TT) 4. Loops to 0x0C at 0x40" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+  if (!load_program("tb_out/01-opimm.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+    for (int i=0; i<20; ++i) {
+      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+		<< ", FD_PC=0x" << std::hex << FD_PC
+		<< ", x1 = " << std::dec
+		<< static_cast<int32_t>(dut->core_top->CPU0->RF->data[1])
+		<< std::endl;
+      wait();
+    }
+  }
+}
+
+void cpu_top_tb_t::test2()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+void cpu_top_tb_t::test3()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+void cpu_top_tb_t::test4()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+void cpu_top_tb_t::test5()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+void cpu_top_tb_t::test6()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+void cpu_top_tb_t::test7()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+void cpu_top_tb_t::test8()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+void cpu_top_tb_t::test9()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+void cpu_top_tb_t::test10()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+void cpu_top_tb_t::test11()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+void cpu_top_tb_t::test12()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+void cpu_top_tb_t::test13()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+void cpu_top_tb_t::test14()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+void cpu_top_tb_t::test15()
+{
+ if (!load_program("tb_out/00-nop.bin")) {
+    std::cerr << "Program loading failed!" << std::endl;
+  }
+  else {
+    reset();
+  }
+}
+
 void cpu_top_tb_t::test_thread()
 {
   reset();
 
   test0();
+  test1();
+  test2();
+  test3();
+  test4();
+  test5();
+  test6();
+  test7();
+  test8();
+  test9();
+  test10();
+  test11();
+  test12();
+  test13();
+  test14();
+  test15();
 
   sc_stop();
 }
