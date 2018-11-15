@@ -346,83 +346,199 @@ void cpu_top_tb_t::test6()
 }
 void cpu_top_tb_t::test7()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 7: CSRWI Test " << std::endl
+    << "(TT) 1. On failure, a message is displayed" << std::endl
+    << "(TT) 2. Failure vector is PC=0x10" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+ if (!load_program("tb_out/07-csrwi.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+    for (int i=0; i<48; ++i) {
+      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
+	std::cout << "(TT) Test failed!" << std::endl;
+      }
+      wait();
+    }
   }
 }
+
 void cpu_top_tb_t::test8()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 8: CSRW Test " << std::endl
+    << "(TT) 1. On failure, a message is displayed" << std::endl
+    << "(TT) 2. Failure vector is PC=0x10" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+ if (!load_program("tb_out/08-csrw.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+    for (int i=0; i<48; ++i) {
+      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
+	std::cout << "(TT) Test failed!" << std::endl;
+      }
+      wait();
+    }
   }
 }
+
 void cpu_top_tb_t::test9()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 9: CSRSI Test " << std::endl
+    << "(TT) 1. On failure, a message is displayed" << std::endl
+    << "(TT) 2. Failure vector is PC=0x10" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+ if (!load_program("tb_out/09-csrsi.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+    for (int i=0; i<48; ++i) {
+      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
+	std::cout << "(TT) Test failed!" << std::endl;
+      }
+      wait();
+    }
   }
 }
+
 void cpu_top_tb_t::test10()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 10: CSRS Test " << std::endl
+    << "(TT) 1. On failure, a message is displayed" << std::endl
+    << "(TT) 2. Failure vector is PC=0x10" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+ if (!load_program("tb_out/10-csrs.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+    for (int i=0; i<48; ++i) {
+      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
+	std::cout << "(TT) Test failed!" << std::endl;
+      }
+      wait();
+    }
   }
 }
+
 void cpu_top_tb_t::test11()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 11: CSRCI Test " << std::endl
+    << "(TT) 1. On failure, a message is displayed" << std::endl
+    << "(TT) 2. Failure vector is PC=0x10" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+ if (!load_program("tb_out/11-csrci.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+    for (int i=0; i<48; ++i) {
+      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
+	std::cout << "(TT) Test failed!" << std::endl;
+      }
+      wait();
+    }
   }
 }
+
 void cpu_top_tb_t::test12()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 12: CSRC Test " << std::endl
+    << "(TT) 1. On failure, a message is displayed" << std::endl
+    << "(TT) 2. Failure vector is PC=0x10" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+ if (!load_program("tb_out/12-csrc.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+    for (int i=0; i<48; ++i) {
+      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
+	std::cout << "(TT) Test failed!" << std::endl;
+      }
+      wait();
+    }
   }
 }
+
 void cpu_top_tb_t::test13()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 13: CSR Atomic Test " << std::endl
+    << "(TT) 1. On failure, a message is displayed" << std::endl
+    << "(TT) 2. Failure vector is PC=0x10" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+ if (!load_program("tb_out/13-csr.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+    for (int i=0; i<48; ++i) {
+      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
+	std::cout << "(TT) Test failed!" << std::endl;
+      }
+      wait();
+    }
   }
 }
+
 void cpu_top_tb_t::test14()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 14: Memory " << std::endl
+    << "(TT) 1. On failure, a message is displayed" << std::endl
+    << "(TT) 2. Failure vector is PC=0x10" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+ if (!load_program("tb_out/14-mem.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+    for (int i=0; i<80; ++i) {
+      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
+	std::cout << "(TT) Test failed!" << std::endl;
+      }
+      wait();
+    }
   }
 }
+
 void cpu_top_tb_t::test15()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 15: Exception" << std::endl
+    << "(TT) 1. On failure, a message is displayed" << std::endl
+    << "(TT) 2. Failure vector is PC=0x10" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+ if (!load_program("tb_out/15-exception.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+    for (int i=0; i<256; ++i) {
+      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
+	std::cout << "(TT) Test failed!" << std::endl;
+      }
+      wait();
+    }
   }
 }
 
