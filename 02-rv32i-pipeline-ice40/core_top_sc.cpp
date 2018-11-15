@@ -489,7 +489,12 @@ void cpu_top_tb_t::test13()
   }
   else {
     reset();
-    for (int i=0; i<48; ++i) {
+    for (int i=0; i<12; ++i) {
+      // std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+      // 		<< ", FD_PC=0x" << std::hex << FD_PC
+      // 		<< ", x1 = " << std::hex
+      // 		<< dut->core_top->CPU0->RF->data[1]
+      // 		<< std::endl;
       if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
 	std::cout << "(TT) Test failed!" << std::endl;
       }
@@ -534,6 +539,11 @@ void cpu_top_tb_t::test15()
   else {
     reset();
     for (int i=0; i<256; ++i) {
+      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+		<< ", FD_PC=0x" << std::hex << FD_PC
+		<< ", x1 = " << std::hex
+		<< dut->core_top->CPU0->RF->data[1]
+		<< std::endl;
       if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
 	std::cout << "(TT) Test failed!" << std::endl;
       }
