@@ -272,11 +272,28 @@ void cpu_top_tb_t::test3()
 }
 void cpu_top_tb_t::test4()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 4: LUI/AUIPC Test " << std::endl
+    << "(TT) 1. Waveform must be inspected" << std::endl
+    << "(TT) 2. First, x1 will be loaded with 0xDEADBEEF" << std::endl
+    << "(TT) 3. Then, x1 will be loaded with PC=0x14" << std::endl
+    << "(TT) 4. Loops at 0x18" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+
+ if (!load_program("tb_out/04-lui.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+    for (int i=0; i<16; ++i) {
+      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+		<< ", FD_PC=0x" << std::hex << FD_PC
+		<< ", x1 = " << std::hex
+		<< dut->core_top->CPU0->RF->data[1]
+		<< std::endl;
+      wait();
+    }
   }
 }
 void cpu_top_tb_t::test5()
