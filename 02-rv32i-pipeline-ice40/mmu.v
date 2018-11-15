@@ -42,7 +42,9 @@ module mmu(
    // Clock, reset, data memory write enable
    input wire clk, resetb, dm_we;
    // IM address, DM address, DM data in
+   /* verilator lint_off UNUSED */
    input wire [31:0] im_addr, dm_addr, dm_di;
+   /* verilator lint_on UNUSED */
    // DM data byte enable, non-encoded
    input wire [3:0]  dm_be;
    // DM sign extend or unsigned extend
@@ -72,7 +74,9 @@ module mmu(
    // BRAM data input
    reg [31:0] 		    ram_di;
    // Selected device
+   /* verilator lint_off UNUSED */
    integer 		    chosen_device_tmp;
+   /* verilator lint_on UNUSED */
    // Selected device, pipelined
    reg [2:0] 		    chosen_device_p;
    // DM byte enable, pipelined
@@ -80,7 +84,7 @@ module mmu(
    // MMU signed/unsigned extend, pipelined
    reg 			    is_signed_p;
    // IO Read input, IO read input pipelined, IO write output
-   reg [31:0] 		    io_data_read_tmp, io_data_read_p, io_data_write_tmp;
+   reg [31:0] 		    io_data_write_tmp;
    // IO address
    reg [7:0] 		    io_addr_tmp;
    // IO enable, IO write enable
@@ -95,7 +99,7 @@ module mmu(
 	       ) ram0 (
    		       .clk(clk), .we(ram_we), .en(dm_be[0]), 
    		       .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
-   		       .di(ram_di[0+:8]), .do(ram_do[0+:8])
+   		       .din(ram_di[0+:8]), .dout(ram_do[0+:8])
    		       );
    BRAM_SSP 
      #(
@@ -104,7 +108,7 @@ module mmu(
    ram1 (
    	 .clk(clk), .we(ram_we), .en(dm_be[1]), 
    	 .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
-   	 .di(ram_di[8+:8]), .do(ram_do[8+:8])
+   	 .din(ram_di[8+:8]), .dout(ram_do[8+:8])
 	 );
    BRAM_SSP
      #(
@@ -113,7 +117,7 @@ module mmu(
    ram2 (
    	 .clk(clk), .we(ram_we), .en(dm_be[2]), 
    	 .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
-   	 .di(ram_di[16+:8]), .do(ram_do[16+:8])
+   	 .din(ram_di[16+:8]), .dout(ram_do[16+:8])
    	 );
    BRAM_SSP
      #(
@@ -122,13 +126,13 @@ module mmu(
    ram3 (
    	 .clk(clk), .we(ram_we), .en(dm_be[3]), 
    	 .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
-   	 .di(ram_di[24+:8]), .do(ram_do[24+:8])
+   	 .din(ram_di[24+:8]), .dout(ram_do[24+:8])
    	 );
 
    // The MMU pipeline
    always @ (posedge clk, negedge resetb) begin : MMU_PIPELINE
       if (!resetb) begin
-	 chosen_device_p <= 2'bX;
+	 chosen_device_p <= 3'bX;
 	 is_signed_p <= 1'bX;
 	 dm_be_p <= 4'b0;
 	 // First instruction is initialized as NOP
@@ -141,7 +145,7 @@ module mmu(
       else if (clk) begin
 	 // Notice the pipeline. The naming is a bit inconsistent
 	 dm_be_p <= dm_be;
-	 chosen_device_p <= chosen_device_tmp;
+	 chosen_device_p <= chosen_device_tmp[2:0];
 	 is_signed_p <= is_signed;
 	 im_do <= im_data;
 	 io_data_write <= io_data_write_tmp;
@@ -151,7 +155,9 @@ module mmu(
       end
    end
 
+   /* verilator lint_off UNUSED */
    reg [31:0] 		    ram_addr_temp, io_addr_temp;
+   /* verilator lint_on UNUSED */
    // Device mapping from address
    // Note: X-Optimism might be a problem. Convert to Tertiary to fix
    always @ (*) begin : DM_ADDR_MAP
@@ -162,7 +168,7 @@ module mmu(
       io_we_tmp = 1'b0;
       io_data_write_tmp = 32'bX;
       ram_we = 1'b0;
-      ram_addr = {WORD_DEPTH_LOG-1{1'bX}};
+      ram_addr = {(WORD_DEPTH_LOG-2){1'bX}};
       ram_di = 32'bX;
       chosen_device_tmp = DEV_UNKN;
       if (dm_addr[31:12] == 20'b0) begin
@@ -171,7 +177,7 @@ module mmu(
       end
       else if (dm_addr[31] == 1'b0 && dm_addr[30:28] != 3'b0) begin
    	 // 0x10000000 - 0x7FFFFFFF
-   	 ram_addr = ram_addr_temp[2+:WORD_DEPTH_LOG];
+   	 ram_addr = ram_addr_temp[2+:WORD_DEPTH_LOG-2];
    	 ram_di = dm_di_shift;
    	 ram_we = dm_we;
    	 chosen_device_tmp = DEV_DM;

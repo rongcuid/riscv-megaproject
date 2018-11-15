@@ -26,7 +26,7 @@ module regfile(
 	       );
 
    // 32x32 registers
-   reg [31:0] 		  data [0:31];
+   reg [31:0] 		  data [0:31] /*verilator public*/;
    // Temporary variable
    integer 		  i;
 

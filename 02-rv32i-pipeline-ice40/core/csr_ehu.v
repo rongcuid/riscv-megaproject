@@ -47,7 +47,9 @@ module csr_ehu
    reg [31:0] 	      mscratch, mcause, mtval;
    reg [63:0] 	      mcycle, minstret;
 
+   /* verilator lint_off UNUSED */
    wire 	      initiate_exception;
+   /* verilator lint_on UNUSED */
    wire 	      FD_exception, XB_exception;
    // There exists an exception from FD stage
    assign FD_exception = XB_FD_exception_unsupported_category |
@@ -95,6 +97,7 @@ module csr_ehu
 	 data_out <= 32'bX;
       end
       else if (clk) begin
+	 /* verilator lint_off BLKSEQ */
 	 XB_exception_illegal_instruction = 1'b0;
 	 mcycle <= mcycle + 64'b1;
 	 if (!XB_bubble) begin
@@ -213,7 +216,8 @@ module csr_ehu
 	    else if (XB_FD_exception_store_misaligned) begin
 	       mcause <= 32'd6;
 	    end
-	 end
+	 end // if (FD_exception)
+	 /* verilator lint_on BLKSEQ */
       end // if (clk)
    end // block: CSR_PIPELINE
    

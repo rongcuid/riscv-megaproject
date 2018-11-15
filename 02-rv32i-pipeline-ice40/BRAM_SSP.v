@@ -4,7 +4,7 @@
 
 // Synchronous Single Port
 module BRAM_SSP(
-		clk, we, en, addr, di, do
+		clk, we, en, addr, din, dout
 		);
    parameter 
      DEPTH = 256,
@@ -13,19 +13,19 @@ module BRAM_SSP(
    
    input clk, we, en;
    input [DEPTH_LOG-1:0] addr;
-   input [WIDTH-1:0] 	 di;
-   output [WIDTH-1:0] 	 do;
+   input [WIDTH-1:0] 	 din;
+   output [WIDTH-1:0] 	 dout;
 
    reg [WIDTH-1:0] 	 RAM [DEPTH-1:0];
-   reg [WIDTH-1:0] 	 do;
+   reg [WIDTH-1:0] 	 dout;
 
    always @ (posedge clk) begin
       if (en & we) begin
-	    RAM[addr]   <= di;
-	    do <= di;
+	    RAM[addr]   <= din;
+	    dout <= din;
       end
       else
-	do <= RAM[addr];
+	dout <= RAM[addr];
    end
    
 endmodule // BRAM_SSP

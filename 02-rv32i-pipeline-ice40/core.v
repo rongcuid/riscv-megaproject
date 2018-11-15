@@ -24,7 +24,9 @@ module core
    // Top
    clk, resetb,
    // MMU
-   dm_we, im_addr, im_do, dm_addr, dm_di, dm_do, dm_be, dm_is_signed
+   dm_we, im_addr, im_do, dm_addr, dm_di, dm_do, dm_be, dm_is_signed,
+   // Debug
+   FD_disasm_opcode, FD_PC
    );
 `include "core/aluop.vh"
 `include "core/exception_vector.vh"
@@ -55,17 +57,21 @@ module core
    wire 	     FD_csr_read, FD_csr_write, FD_csr_set, FD_csr_clear, FD_csr_imm;
    wire [4:0] 	     FD_a_rs1, FD_a_rs2, FD_a_rd;
    wire [2:0] 	     FD_funct3;
+   /* verilator lint_off UNUSED */
    wire [6:0] 	     FD_funct7;
    wire 	     FD_bug_invalid_instr_format_onehot;
+   /* verilator lint_on UNUSED */   
    wire 	     FD_exception_unsupported_category;
    wire 	     FD_exception_illegal_instruction;
    reg 		     FD_exception_instruction_misaligned;
    wire 	     FD_exception_load_misaligned;
    wire 	     FD_exception_store_misaligned;
+   output wire [255:0] FD_disasm_opcode;
 
    // Program Counter
    wire 	     FD_initiate_illinst, FD_initiate_misaligned;
-   reg [31:0] 	     FD_PC, nextPC;
+   output reg [31:0] FD_PC;
+   reg [31:0] 	     nextPC;
 
    // FD ALU
    wire [31:0] FD_aluout;
@@ -77,7 +83,9 @@ module core
 
    // XB Stage registers
    reg [31:0]  XB_d_rs1, XB_d_rs2, XB_imm;
+   /* verilator lint_off UNUSED */   
    reg [4:0]   XB_a_rs1;
+   /* verilator lint_on UNUSED */   
    reg 	       XB_regwrite;
    reg 	       XB_memtoreg;
    reg 	       XB_alu_is_signed;
@@ -123,11 +131,12 @@ module core
       .exception_unsupported_category(FD_exception_unsupported_category),
       .exception_illegal_instruction(FD_exception_illegal_instruction),
       .exception_load_misaligned(FD_exception_load_misaligned),
-      .exception_store_misaligned(FD_exception_store_misaligned)
+      .exception_store_misaligned(FD_exception_store_misaligned),
+      .disasm_opcode(FD_disasm_opcode)
       );
 
    // Next PC for Branches
-   reg [31:0]  nextPC_br;
+   // reg [31:0]  nextPC_br;
    // Successful branch
    reg 	       do_branch;
    always @ (*) begin : PC_UPDATE

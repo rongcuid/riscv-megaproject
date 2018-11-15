@@ -11,7 +11,9 @@ module core_top
    output wire 	      io_en, 
    output wire 	      io_we, 
    input wire [31:0]  io_data_read, 
-   output wire [31:0] io_data_write
+   output wire [31:0] io_data_write,
+   output wire [255:0] FD_disasm_opcode,
+   output wire [31:0] FD_PC
    );
 
    wire 	      dm_we;
@@ -22,13 +24,15 @@ module core_top
    wire [31:0] 	      dm_do;
    wire [3:0] 	      dm_be;
    wire 	      dm_is_signed;
-   
+
    core CPU0
      (
       .clk(clk), .resetb(resetb),
       .dm_we(dm_we), .im_addr(im_addr), .im_do(im_do),
       .dm_addr(dm_addr), .dm_di(dm_di), .dm_do(dm_do),
-      .dm_be(dm_be), .dm_is_signed(dm_is_signed)
+      .dm_be(dm_be), .dm_is_signed(dm_is_signed),
+      .FD_disasm_opcode(FD_disasm_opcode),
+      .FD_PC(FD_PC)
       );
 
    mmu MMU0
