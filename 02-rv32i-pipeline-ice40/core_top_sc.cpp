@@ -298,11 +298,27 @@ void cpu_top_tb_t::test4()
 }
 void cpu_top_tb_t::test5()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 5: JAL/JALR Test " << std::endl
+    << "(TT) 1. Waveform must be inspected" << std::endl
+    << "(TT) 2. PC=00,0C,18,10,1C,14,0C,18,10,1C,..." << std::endl
+    << "(TT) 3. x1=XX,XX,XX,10,10,14,20,20,10,10,..." << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+    
+  if (!load_program("tb_out/05-jalr.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+    for (int i=0; i<16; ++i) {
+      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+		<< ", FD_PC=0x" << std::hex << FD_PC
+		<< ", x1 = " << std::hex
+		<< dut->core_top->CPU0->RF->data[1]
+		<< std::endl;
+		   wait();
+    }
   }
 }
 void cpu_top_tb_t::test6()
