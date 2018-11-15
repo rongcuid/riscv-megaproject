@@ -250,11 +250,24 @@ void cpu_top_tb_t::test2()
 }
 void cpu_top_tb_t::test3()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 3: Branch Test " << std::endl
+    << "(TT) 1. Waveform must be inspected" << std::endl
+    << "(TT) 2. Each type of branch instruction executes twice" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+  if (!load_program("tb_out/03-br.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+
+    for (int i=0; i<48; ++i) {
+      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+		<< ", FD_PC=0x" << std::hex << FD_PC
+		<< std::endl;
+      wait();
+    }
   }
 }
 void cpu_top_tb_t::test4()
