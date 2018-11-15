@@ -321,13 +321,27 @@ void cpu_top_tb_t::test5()
     }
   }
 }
+  
 void cpu_top_tb_t::test6()
 {
- if (!load_program("tb_out/00-nop.bin")) {
+  std::cout
+    << "(TT) --------------------------------------------------" << std::endl
+    << "(TT) Test 6: CSRR Test " << std::endl
+    << "(TT) 1. On failure, a message is displayed" << std::endl
+    << "(TT) 2. Failure vector is PC=0x10" << std::endl
+    << "(TT) --------------------------------------------------" << std::endl;
+    
+  if (!load_program("tb_out/06-csrr.bin")) {
     std::cerr << "Program loading failed!" << std::endl;
   }
   else {
     reset();
+    for (int i=0; i<48; ++i) {
+      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
+	std::cout << "(TT) Test failed!" << std::endl;
+      }
+      wait();
+    }
   }
 }
 void cpu_top_tb_t::test7()
