@@ -96,6 +96,8 @@ public:
     wait();
   }
 
+  void dump_memory();
+
   void im_thread(void);
   void io_thread(void);
   
@@ -128,7 +130,7 @@ void cpu_run_t::io_thread()
 
 bool cpu_run_t::load_program(const std::string& path)
 {
-  ifstream f(path, std::ios::binary);
+  ifstream f(path + ".bin", std::ios::binary);
   if (f.is_open()) {
     std::vector<unsigned char> buf
       (std::istreambuf_iterator<char>(f), {});
@@ -159,6 +161,22 @@ std::string bv_to_opcode(const sc_bv<256>& bv)
   return op;
 }
 
+void cpu_run_t::dump_memory()
+{
+  bool begin_dump = false;
+  for (int i=0; i<1024; ++i) {
+    uint32_t word = instruction_memory_tb[i].read();
+    if (begin_dump) {
+      std::cout << "(TT) " << std::hex << word << std::endl;
+    }
+    if (word == 0xdeadc0de) {
+      begin_dump = true;
+    }
+    if (word == 0xdeaddead) {
+      break;
+    }
+  }
+}
 
 void cpu_run_t::test_thread()
 {
@@ -173,6 +191,7 @@ void cpu_run_t::test_thread()
     wait();
   }
   // TODO: Dump memory
+  dump_memory();
   sc_stop();
 }
 
