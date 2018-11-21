@@ -1,6 +1,7 @@
-AS=riscv32-unknown-elf-as
-OBJCOPY=riscv32-unknown-elf-objcopy
-all: compile_core_tb
+RISCV_PREFIX ?= riscv32-unknown-elf-
+AS=$(RISCV_PREFIX)as
+OBJCOPY=$(RISCV_PREFIX)objcopy
+all: compile_cpu_run
 #	echo "(MM) Compiling and running all tests"
 
 compile_regfile_tb: regfile.v regfile_sc.cpp
@@ -48,6 +49,10 @@ compile_core_tb: core_top.v core_top_sc.cpp BRAM_SSP.v mmu.v regfile.v core/csr_
 	verilator -Wall --sc $^ --exe -o ../tb_out/cpu_top_tb
 	make -C obj_dir -f Vcore_top.mk
 
+compile_cpu_run: cpu_run_sc.cpp core_top.v BRAM_SSP.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v 
+	echo "(MM) Compiling CPU Simulator"
+	verilator -Wall --sc $^ --exe -o ../tb_out/cpu_run
+	make -C obj_dir -f Vcore_top.mk
 
 run_core_tb: compile_core_tb $(TEST_PROGRAMS)
 	./tb_out/cpu_top_tb

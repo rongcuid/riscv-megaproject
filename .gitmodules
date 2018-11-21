@@ -1,0 +1,3 @@
+[submodule "02-rv32i-pipeline-ice40/riscv-compliance"]
+	path = 02-rv32i-pipeline-ice40/riscv-compliance
+	url = git@github.com:rongcuid/riscv-compliance.git
