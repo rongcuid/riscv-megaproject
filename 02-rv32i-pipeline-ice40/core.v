@@ -165,7 +165,7 @@ module core
       // Branch, Jump, Jump Register, Increment
       nextPC = (FD_initiate_illinst) ? `VEC_ILLEGAL_INST
 	       : (FD_initiate_misaligned) ? `VEC_MISALIGNED
-	       : (FD_pc_update & FD_pc_mepc) ? CSR_mepc + 32'h4
+	       : (FD_pc_update & FD_pc_mepc) ? CSR_mepc
 	       : (do_branch) ? FD_imm + FD_PC
 	       : (FD_jump) ? FD_PC + FD_imm
 	       : (FD_jr) ? FD_aluout
