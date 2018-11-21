@@ -165,8 +165,14 @@ void cpu_run_t::test_thread()
   reset();
 
   load_program(program);
-  // TODO: Implement test end criteria
-
+  while(true) {
+    // Test end criteria: in exception and a0/x9 = 0xbaad900d
+    if (FD_PC == 0x10 && dut->core_top->CPU0->RF->data[9] == 0xbaad900d) {
+      break;
+    }
+    wait();
+  }
+  // TODO: Dump memory
   sc_stop();
 }
 
