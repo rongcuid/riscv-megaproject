@@ -358,6 +358,7 @@ void cpu_top_tb_t::test7()
     reset();
     uint32_t prev_PC = 0;
     for (int i=0; i<96; ++i) {
+      view_snapshot_int();
       if (report_failure(0x10, prev_PC)) break;
       prev_PC = FD_PC;
       wait();
@@ -556,14 +557,14 @@ void cpu_top_tb_t::test_thread()
   test5();
   test6();
   test7();
-  test8();
-  test9();
-  test10();
-  test11();
-  test12();
-  test13();
-  test14();
-  test15();
+  //test8();
+  //test9();
+  //test10();
+  //test11();
+  //test12();
+  //test13();
+  //test14();
+  //test15();
 
   sc_stop();
 }
