@@ -74,4 +74,14 @@ test_csrsi:
 	csrr x1, minstreth
 	bne x1, x2, test_failed
 
+        # mstatus
+        csrsi mstatus, 1 # ignored 
+        csrr x1, mstatus
+        li x3, 0b00000000000000000001100000000000
+        bne x1, x3, test_failed
+        csrsi mstatus, 8 # mie
+        csrr x1, mstatus
+        li x3, 0b00000000000000000001100000001000
+        bne x1, x3, test_failed
+
 	j main

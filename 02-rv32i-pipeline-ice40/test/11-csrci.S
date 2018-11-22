@@ -64,4 +64,12 @@ test_csrci:
 	csrr x1, minstreth
 	bnez x1, test_failed
 
+        # mstatus
+        li x2, 0b00000000000000000000000010001000
+        csrs mstatus, x2
+        csrci mstatus, 0b1000
+        csrr x1, mstatus
+        li x3, 0b00000000000000000001100010000000
+        bne x1, x3, test_failed
+
 	j main

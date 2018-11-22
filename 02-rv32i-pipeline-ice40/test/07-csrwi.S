@@ -70,4 +70,14 @@ test_csrwi:
 	csrr x1, minstreth
 	bne x1, x2, test_failed
 
+        # mstatus
+        csrwi mstatus, 0x1 # ignored
+        csrr x1, mstatus
+        li x2, 0b00000000000000000001100000000000
+        bne x2, x1, test_failed
+        csrwi mstatus, 0x8 # mie
+        li x2, 0b00000000000000000001100000001000
+        csrr x1, mstatus
+        bne x1, x2, test_failed
+
 	j main
