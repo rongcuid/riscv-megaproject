@@ -145,6 +145,7 @@ public:
                 << std::hex 
                 << FD_PC
 		<< ", x1 = "
+                << std::dec
 		<< static_cast<int32_t>(dut->core_top->CPU0->RF->data[1])
 		<< std::endl;
   }

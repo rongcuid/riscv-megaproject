@@ -67,6 +67,13 @@ test_illegal_csr:
 	bne x4, x7, test_failed
 	bne x5, x6, test_failed
 
+test_ecall:
+        ecall 
+        li x4, 11 # M-mode ecall
+        li x5, 0xE4
+        bne x1, x3, test_failed
+        bne x4, x7, test_failed
+        bne x5, x6, test_failed
 
 	j main
 

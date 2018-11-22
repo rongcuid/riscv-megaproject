@@ -10,6 +10,7 @@ class rom_1024x32_t : public sc_module
     sc_in<uint32_t> addr2;
     sc_out<uint32_t> data1;
     sc_out<uint32_t> data2;
+    uint32_t data[1024];
 
     void port1() {
       while(true) {
@@ -65,7 +66,6 @@ class rom_1024x32_t : public sc_module
 
   private:
     sc_signal<bool> update;
-    uint32_t data[1024];
 };
 
 #endif

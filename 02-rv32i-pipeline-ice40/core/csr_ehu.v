@@ -19,6 +19,7 @@ module csr_ehu
    // Exception In
    XB_FD_exception_unsupported_category,
    XB_FD_exception_illegal_instruction,
+   XB_FD_exception_ecall,
    XB_FD_exception_instruction_misaligned,
    XB_FD_exception_load_misaligned,
    XB_FD_exception_store_misaligned,
@@ -36,6 +37,7 @@ module csr_ehu
    input wire [4:0]  uimm;
    input wire	     XB_FD_exception_unsupported_category;
    input wire	     XB_FD_exception_illegal_instruction;
+   input wire	     XB_FD_exception_ecall;
    input wire	     XB_FD_exception_instruction_misaligned;
    input wire	     XB_FD_exception_load_misaligned;
    input wire	     XB_FD_exception_store_misaligned;
@@ -53,6 +55,7 @@ module csr_ehu
    // There exists an exception from FD stage
    assign FD_exception = XB_FD_exception_unsupported_category |
    		         XB_FD_exception_illegal_instruction |
+   		         XB_FD_exception_ecall |
    		         XB_FD_exception_instruction_misaligned |
    		         XB_FD_exception_load_misaligned |
    		         XB_FD_exception_store_misaligned;
@@ -65,8 +68,10 @@ module csr_ehu
 
    // Exception Handling Unit. XB exceptions have higher priority
    // since XB instruction is senior. XB must not be a bubble
-   reg initiate_illinst, initiate_misaligned;
+   reg initiate_illinst, initiate_misaligned, initiate_ecall;
    always @ (*) begin : EXCEPTION_HANDLING_UNIT
+      initiate_ecall
+	= ~XB_bubble & XB_FD_exception_ecall;
       initiate_illinst
 	= ~XB_bubble & (XB_exception_illegal_instruction |
       			XB_FD_exception_illegal_instruction |
@@ -76,7 +81,7 @@ module csr_ehu
       			XB_FD_exception_load_misaligned |
       			XB_FD_exception_store_misaligned);
 
-      initiate_exception = initiate_illinst | initiate_misaligned;
+      initiate_exception = initiate_ecall | initiate_illinst | initiate_misaligned;
    end
 
    // The operand to operate on target CSR
@@ -222,6 +227,9 @@ module csr_ehu
 	    else if (XB_FD_exception_store_misaligned) begin
 	       mcause <= 32'd6;
 	    end
+            else if (XB_FD_exception_ecall) begin
+              mcause <= 32'd11;
+            end
 	 end // if (FD_exception)
 	 /* verilator lint_on BLKSEQ */
       end // if (clk)
