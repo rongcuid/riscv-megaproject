@@ -98,6 +98,15 @@ public:
   
   bool load_program(const std::string& path);
 
+  bool report_failure(uint32_t prev_PC) 
+  {
+      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
+	std::cout << "(TT) Test failed! prevPC = 0x" 
+          << std::hex << prev_PC << std::endl;
+        return true;
+      }
+      return false;
+  }
   void test_thread(void);
 
   void test0(void);
@@ -357,10 +366,10 @@ void cpu_top_tb_t::test7()
   }
   else {
     reset();
+    uint32_t prev_PC = 0;
     for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+      if (report_failure(prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -564,14 +573,14 @@ void cpu_top_tb_t::test_thread()
   test5();
   test6();
   test7();
-  test8();
-  test9();
-  test10();
-  test11();
-  test12();
-  test13();
-  test14();
-  test15();
+  //test8();
+  //test9();
+  //test10();
+  //test11();
+  //test12();
+  //test13();
+  //test14();
+  //test15();
 
   sc_stop();
 }

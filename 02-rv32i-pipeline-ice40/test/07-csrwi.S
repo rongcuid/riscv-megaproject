@@ -31,8 +31,7 @@ test_csrwi:
         # mtvec. Ignores lower two bits
         csrwi mtvec, 0x1
         csrr x1, mtvec
-        li x2, 4
-        bne x1, x2, test_failed
+        bnez x1, test_failed
         csrwi mtvec, 0x8
         csrr x1, mtvec
         li x2, 8
