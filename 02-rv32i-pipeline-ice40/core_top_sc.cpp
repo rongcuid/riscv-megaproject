@@ -520,10 +520,10 @@ void cpu_top_tb_t::test14()
   }
   else {
     reset();
+    uint32_t prev_PC = 0;
     for (int i=0; i<80; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -574,7 +574,7 @@ void cpu_top_tb_t::test_thread()
   test11();
   test12();
   test13();
-  //test14();
+  test14();
   //test15();
 
   sc_stop();
