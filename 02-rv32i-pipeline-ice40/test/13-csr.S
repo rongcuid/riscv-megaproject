@@ -15,6 +15,8 @@ test_csr:
 	bnez x2, test_failed
 	li x3, 3
 	bne x1, x3, test_failed
-        csrwi mcycle, 0
 	
+        li x3, 0xFFFFFFFF
+        csrc mcycle, x3
+        
 	j main
