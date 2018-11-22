@@ -25,6 +25,7 @@ module mmu(
 	   dm_be, is_signed,
 	   // To Instruction Memory
 	   im_addr_out, im_data,
+           im_addr_out_2, im_data_2,
 	   // TO IO
 	   io_addr, io_en, io_we, io_data_read, io_data_write
 	   );
@@ -50,9 +51,9 @@ module mmu(
    // DM sign extend or unsigned extend
    input wire 	     is_signed;
    // IM addr out to ROM
-   output wire [11:2] im_addr_out;
+   output wire [11:2] im_addr_out, im_addr_out_2;
    // IM data from ROM, IO data from IO bank
-   input wire [31:0]  im_data, io_data_read;
+   input wire [31:0]  im_data, im_data_2, io_data_read;
    // IO data to IO bank, DM data output
    output reg [31:0]  io_data_write, dm_do;
    // A temporary register for dm_do
@@ -83,6 +84,8 @@ module mmu(
    reg [3:0] 		    dm_be_p;
    // MMU signed/unsigned extend, pipelined
    reg 			    is_signed_p;
+   // IM port 2 pipelined
+   reg [31:0]               im_data_2_p;
    // IO Read input, IO read input pipelined, IO write output
    reg [31:0] 		    io_data_write_tmp;
    // IO address
@@ -92,6 +95,8 @@ module mmu(
 
    // In this implementaion, the IM ROM address is simply the 11:2 bits of IM address input
    assign im_addr_out[11:2] = im_addr[11:2];
+   // Second port uses DM addr
+   assign im_addr_out_2[11:2] = dm_addr[11:2];
 
    // BRAM bank in interleaved configuration
    BRAM_SSP  #(
@@ -138,6 +143,7 @@ module mmu(
 	 // First instruction is initialized as NOP
 	 im_do <= 32'b0000_0000_0000_00000_000_00000_0010011;
 	 io_data_write <= 32'bX;
+         im_data_2_p <= 32'bX;
 	 io_en <= 1'b0;
 	 io_we <= 1'b0;
 	 io_addr <= 8'bX;
@@ -148,6 +154,7 @@ module mmu(
 	 chosen_device_p <= chosen_device_tmp[2:0];
 	 is_signed_p <= is_signed;
 	 im_do <= im_data;
+         im_data_2_p <= im_data_2;
 	 io_data_write <= io_data_write_tmp;
 	 io_en <= io_en_tmp;
 	 io_we <= io_we_tmp;
@@ -224,6 +231,8 @@ module mmu(
    // Note: X-Optimism might be a problem. Convert to Tertiary to fix
    always @ (*) begin : DM_OUT_SHIFT
       case (chosen_device_p)
+        DEV_IM:
+          dm_do_tmp = im_data_2_p;
    	DEV_DM:
    	  dm_do_tmp = ram_do;
    	DEV_IO:
