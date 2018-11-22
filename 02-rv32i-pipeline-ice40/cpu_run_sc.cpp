@@ -9,6 +9,8 @@
 #include "Vcore_top_core_top.h"
 #include "Vcore_top_core.h"
 #include "Vcore_top_regfile.h"
+#include "Vcore_top_mmu.h"
+#include "Vcore_top_BRAM_SSP__D40_DB6_W8.h"
 
 std::string bv_to_opcode(const sc_bv<256>& bv);
 
@@ -216,7 +218,11 @@ void cpu_run_t::dump_memory()
   bool begin_dump = false;
   ofstream f("mem.log");
   for (int i=0; i<1024; ++i) {
-    uint32_t word = instruction_rom->data[i];
+    uint32_t word = 0;
+    word |= dut->core_top->MMU0->ram0->RAM[i];
+    word |= dut->core_top->MMU0->ram1->RAM[i] << 8;
+    word |= dut->core_top->MMU0->ram2->RAM[i] << 16;
+    word |= dut->core_top->MMU0->ram3->RAM[i] << 24;
     if (f.is_open()) {
       f << std::setfill('0') << std::setw(8) 
         << std::hex << word << std::endl;
@@ -227,7 +233,9 @@ void cpu_run_t::dump_memory()
       if (word == 0xdeaddead) {
         break;
       }
-      std::cout << "(TT) " << std::hex << word << std::endl;
+      std::cout << "(TT) " 
+        << std::setfill('0') << std::setw(8)
+        << std::hex << word << std::endl;
     }
     if (word == 0xdeadc0de) {
       begin_dump = true;
