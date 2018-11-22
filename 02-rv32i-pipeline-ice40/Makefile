@@ -1,11 +1,19 @@
 RISCV_PREFIX ?= riscv32-unknown-elf-
+CC=$(RISCV_PREFIX)gcc
 AS=$(RISCV_PREFIX)as
 OBJCOPY=$(RISCV_PREFIX)objcopy
-all: run_compliance
+all: run_compliance_quick
 #	echo "(MM) Compiling and running all tests"
 
 run_compliance: compile_cpu_run
 	cd riscv-compliance && make
+
+run_compliance_quick: compile_cpu_run compile_compliance_quick
+	./tb_out/cpu_run tb_out/I-ENDIANESS-01.elf
+
+compile_compliance_quick:
+	$(CC) -march=rv32i -mabi=ilp32 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Iriscv-compliance/riscv-test-env/ -Iriscv-compliance/riscv-test-env/msc/ -Iriscv-compliance/riscv-target/msc-02/ -Triscv-compliance/riscv-test-env/msc/link.ld riscv-compliance/riscv-test-suite/rv32i/src/I-ENDIANESS-01.S -o tb_out/I-ENDIANESS-01.elf
+	$(OBJCOPY) -O binary tb_out/I-ENDIANESS-01.elf tb_out/I-ENDIANESS-01.elf.bin
 
 compile_regfile_tb: regfile.v regfile_sc.cpp
 #	echo "(MM) Compiling Regfile testbench"
