@@ -7,6 +7,7 @@ To distinguish with ecall test, a0 (function argument) writes 0xbaad900d when ha
 
 ## Architecture modifications
 
-Reset handler only
-Exception handler must be modifiable via mtvec
+[X] Reset handler only
+[X] Exception handler must be modifiable via mtvec
+[ ] Writable mstatus register
 
