@@ -11,6 +11,10 @@ run_compliance: compile_cpu_run
 #COMPLIANCE_TEST=I-ENDIANESS-01
 #COMPLIANCE_TEST=I-ADD-01
 #COMPLIANCE_TEST=I-ADDI-01
+#COMPLIANCE_TEST=I-ANDI-01
+#COMPLIANCE_TEST=I-AUIPC-01
+#COMPLIANCE_TEST=I-BEQ-01
+COMPLIANCE_TEST=I-BGE-01
 
 run_compliance_quick: compile_cpu_run compile_compliance_quick
 	./tb_out/cpu_run tb_out/$(COMPLIANCE_TEST).elf | tee tb_out/run.out 
