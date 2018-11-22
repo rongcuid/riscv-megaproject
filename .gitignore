@@ -134,3 +134,4 @@ tmp/
 
 obj_dir/
 obj_*/
+*.log
