@@ -23,7 +23,7 @@ module instruction_decoder
    exception_illegal_instruction,
    exception_load_misaligned,
    exception_store_misaligned,
-   exception_ecall,
+   //exception_ecall,
    // Debugging
    disasm_opcode
    );
@@ -145,7 +145,7 @@ module instruction_decoder
    reg 	      exception_illegal_instruction;
    reg 	      exception_load_misaligned;
    reg 	      exception_store_misaligned;
-   output reg        exception_ecall;
+   //output reg        exception_ecall;
    integer    aluop1_sel, aluop2_sel, alu_op;
    // Logic to generate control signals
    always @ (*) begin : CONTROL_SIG_GENERATOR
@@ -181,7 +181,7 @@ module instruction_decoder
       exception_illegal_instruction = 1'b0;
       exception_load_misaligned = 1'b0;
       exception_store_misaligned = 1'b0;
-      exception_ecall = 1'b0;
+      //exception_ecall = 1'b0;
       // Decoding opcode. Read the RISC-V Spec Vol 1.
       case (opcode[6:2])
 	`OP_IMM: begin
@@ -403,7 +403,8 @@ module instruction_decoder
 		case (funct7)
 		  7'b0: begin : ECALL_EBREAK_URET
 		     // Software trap
-		     exception_ecall = 1'b1;
+		     exception_illegal_instruction = 1'b1;
+		     //exception_ecall = 1'b1;
 		  end
 		  7'b0001000: begin : SRET_WFI
 		     // Software trap

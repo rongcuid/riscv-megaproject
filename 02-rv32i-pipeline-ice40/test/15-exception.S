@@ -24,58 +24,56 @@ test_lw_misaligned:
 	li x5, 0x44 # Exception PC
 	lw x1, 1(x2)
 	bne x1, x3, test_failed # x1 must be restored
-	bne x4, x7, test_failed # mcause check
 	bne x5, x6, test_failed # mepc check
+	bne x4, x7, test_failed # mcause check
 test_lh_misaligned:	
 	li x1, 0xDEADBEEF
 	li x4, 4  # Load address misaligned
 	li x5, 0x64 # Exception PC
 	lh x1, 1(x2)
 	bne x1, x3, test_failed # x1 must be restored
-	bne x4, x7, test_failed # mcause check
 	bne x5, x6, test_failed # mepc check
+	bne x4, x7, test_failed # mcause check
 
 test_sw_misaligned:
 	li x1, 0xDEADBEEF
-	li x4, 6 # Store address misaligned
-	li x5, 0x84 # Exception PC
 	sw x0, 1(x2)
+	li x4, 6 # Store address misaligned
+	li x5, 0x7C # Exception PC
 	bne x1, x3, test_failed
-	bne x4, x7, test_failed
 	bne x5, x6, test_failed
+	bne x4, x7, test_failed
 test_sh_misaligned:	
-	li x5, 0x98 # Exception PC
 	sh x0, 1(x2)
+	li x5, 0x94 # Exception PC
 	bne x1, x3, test_failed
-	bne x4, x7, test_failed
 	bne x5, x6, test_failed
+	bne x4, x7, test_failed
 
 test_inst_misaligned:
-	li x4, 0 # Instruction misaligned
-	li x5, 0xB4
 	li x16, 0x1
 	jr x16
+	li x4, 0 # Instruction misaligned
+	li x5, 0xAC
 	bne x1, x3, test_failed
-	bne x4, x7, test_failed
 	bne x5, x6, test_failed
+	bne x4, x7, test_failed
 
 test_illegal_csr:
-	li x4, 2 # Illegal Instruction
-	li x5, 0xCC
 	csrr x31, mip
+	li x4, 2 # Illegal Instruction
+	li x5, 0xC4
 	bne x1, x3, test_failed
-	bne x4, x7, test_failed
 	bne x5, x6, test_failed
+	bne x4, x7, test_failed
 
 test_ecall:
         ecall 
         li x4, 11 # M-mode ecall
-        li x5, 0xE4
+        li x5, 0xDC
         bne x1, x3, test_failed
-        mv x1, x4
-        mv x1, x7
-        bne x4, x7, test_failed
         bne x5, x6, test_failed
+        bne x4, x7, test_failed
 
 	j main
 
