@@ -216,6 +216,7 @@ std::string bv_to_opcode(const sc_bv<256>& bv)
 void cpu_run_t::dump_memory()
 {
   bool begin_dump = false;
+  bool align_skipped = false;
   ofstream f("mem.log");
   for (int i=0; i<1024; ++i) {
     uint32_t word = 0;
@@ -227,15 +228,20 @@ void cpu_run_t::dump_memory()
       f << std::setfill('0') << std::setw(8) 
         << std::hex << word << std::endl;
     }
-//    std::cout << "(DD) " << std::setfill('0') << std::setw(8) 
-//      << std::hex << word << std::endl;
+    //    std::cout << "(DD) " << std::setfill('0') << std::setw(8) 
+    //      << std::hex << word << std::endl;
     if (begin_dump) {
-      if (word == 0xdeaddead) {
-        break;
+      if (align_skipped) {
+        if (word == 0xdeaddead) {
+          break;
+        }
+        std::cout << "(TT) " 
+          << std::setfill('0') << std::setw(8)
+          << std::hex << word << std::endl;
       }
-      std::cout << "(TT) " 
-        << std::setfill('0') << std::setw(8)
-        << std::hex << word << std::endl;
+      else {
+        align_skipped = true;
+      }
     }
     if (word == 0xdeadc0de) {
       begin_dump = true;
