@@ -18,5 +18,6 @@ test_csr:
 	
         li x3, 0xFFFFFFFF
         csrc mcycle, x3
+        nop
         
 	j main

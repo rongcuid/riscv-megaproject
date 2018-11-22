@@ -72,6 +72,8 @@ test_ecall:
         li x4, 11 # M-mode ecall
         li x5, 0xE4
         bne x1, x3, test_failed
+        mv x1, x4
+        mv x1, x7
         bne x4, x7, test_failed
         bne x5, x6, test_failed
 
