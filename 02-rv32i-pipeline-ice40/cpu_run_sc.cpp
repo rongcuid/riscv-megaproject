@@ -235,7 +235,7 @@ void cpu_run_t::dump_memory()
         if (word == 0xdeaddead) {
           break;
         }
-        std::cout << "(TT) " 
+        std::cout << "(DD) " 
           << std::setfill('0') << std::setw(8)
           << std::hex << word << std::endl;
       }
@@ -260,7 +260,7 @@ void cpu_run_t::test_thread()
     exit(1);
   }
   reset();
-  while(true) {
+  for (int i=0; i<4096; ++i) {
     // TODO: Test end criteria
     view_snapshot_hex();
     if (test_passes.read()) {
