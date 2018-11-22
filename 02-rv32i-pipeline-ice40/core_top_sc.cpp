@@ -98,6 +98,15 @@ public:
   
   bool load_program(const std::string& path);
 
+  bool report_failure(uint32_t failure_vec, uint32_t prev_PC) 
+  {
+      if (FD_PC == failure_vec || FD_disasm_opcode.read() == "ILLEGAL ") {
+	std::cout << "(TT) Test failed! prevPC = 0x" 
+          << std::hex << prev_PC << std::endl;
+        return true;
+      }
+      return false;
+  }
   void test_thread(void);
 
   void test0(void);
@@ -289,7 +298,7 @@ void cpu_top_tb_t::test4()
     for (int i=0; i<16; ++i) {
       std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
 		<< ", FD_PC=0x" << std::hex << FD_PC
-		<< ", x1 = " << std::hex
+		<< ", x1 = 0x" << std::hex
 		<< dut->core_top->CPU0->RF->data[1]
 		<< std::endl;
       wait();
@@ -357,10 +366,10 @@ void cpu_top_tb_t::test7()
   }
   else {
     reset();
+    uint32_t prev_PC = 0;
     for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -379,10 +388,10 @@ void cpu_top_tb_t::test8()
   }
   else {
     reset();
+    uint32_t prev_PC = 0;
     for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -401,10 +410,10 @@ void cpu_top_tb_t::test9()
   }
   else {
     reset();
+    uint32_t prev_PC = 0;
     for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -423,10 +432,10 @@ void cpu_top_tb_t::test10()
   }
   else {
     reset();
+    uint32_t prev_PC = 0;
     for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -445,10 +454,10 @@ void cpu_top_tb_t::test11()
   }
   else {
     reset();
+    uint32_t prev_PC = 0;
     for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -467,10 +476,10 @@ void cpu_top_tb_t::test12()
   }
   else {
     reset();
+    uint32_t prev_PC = 0;
     for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -489,15 +498,10 @@ void cpu_top_tb_t::test13()
   }
   else {
     reset();
+    uint32_t prev_PC = 0;
     for (int i=0; i<12; ++i) {
-      // std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
-      // 		<< ", FD_PC=0x" << std::hex << FD_PC
-      // 		<< ", x1 = " << std::hex
-      // 		<< dut->core_top->CPU0->RF->data[1]
-      // 		<< std::endl;
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -516,10 +520,10 @@ void cpu_top_tb_t::test14()
   }
   else {
     reset();
+    uint32_t prev_PC = 0;
     for (int i=0; i<80; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -538,15 +542,15 @@ void cpu_top_tb_t::test15()
   }
   else {
     reset();
+    uint32_t prev_PC = 0;
     for (int i=0; i<256; ++i) {
       std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
 		<< ", FD_PC=0x" << std::hex << FD_PC
 		<< ", x1 = " << std::hex
 		<< dut->core_top->CPU0->RF->data[1]
 		<< std::endl;
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+      if (report_failure(0x0C, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }

@@ -28,6 +28,13 @@ test_csrc:
 	csrc mcause, x2
 	csrr x1, mcause
 	bnez x1, test_failed
+
+	# mtvec
+        li x3, 0xC
+	csrwi mtvec, 0xC
+	csrc mtvec, x3
+	csrr x1, mtvec
+	bnez x1, test_failed
 	
 	# mtval. May be called mbadaddr
 	csrwi mbadaddr, 0x1

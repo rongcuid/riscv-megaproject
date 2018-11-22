@@ -69,7 +69,7 @@ module core
    output wire [255:0] FD_disasm_opcode;
 
    // Program Counter
-   wire 	     FD_initiate_illinst, FD_initiate_misaligned;
+   wire 	     FD_initiate_exception;
    output reg [31:0] FD_PC;
    reg [31:0] 	     nextPC;
 
@@ -105,7 +105,7 @@ module core
    // CSR Register file and Exception Handling Unit
    wire [31:0] XB_csr_out;
    wire        XB_csr_read, XB_csr_write, XB_csr_set, XB_csr_clear, XB_csr_imm;
-   wire [31:0] CSR_mepc;
+   wire [31:0] CSR_mepc, CSR_mtvec;
    reg 	       XB_csr_writeback;
 
    assign dm_be = FD_bubble ? 4'b0 : FD_dm_be;
@@ -163,8 +163,7 @@ module core
       //
       // Illegal Instruction Exception, Misaligned Exception, MRET,
       // Branch, Jump, Jump Register, Increment
-      nextPC = (FD_initiate_illinst) ? `VEC_ILLEGAL_INST
-	       : (FD_initiate_misaligned) ? `VEC_MISALIGNED
+      nextPC = (FD_initiate_exception) ? CSR_mtvec
 	       : (FD_pc_update & FD_pc_mepc) ? CSR_mepc
 	       : (do_branch) ? FD_imm + FD_PC
 	       : (FD_jump) ? FD_PC + FD_imm
@@ -260,15 +259,15 @@ module core
       .read(XB_csr_read), .write(XB_csr_write),
       .set(XB_csr_set), .clear(XB_csr_clear),
       .imm(XB_csr_imm), .a_rd(FD_a_rd),
-      .initiate_illinst(FD_initiate_illinst),
-      .initiate_misaligned(FD_initiate_misaligned),
+      .initiate_exception(FD_initiate_exception),
       .XB_FD_exception_unsupported_category(XB_FD_exception_unsupported_category),
       .XB_FD_exception_illegal_instruction(XB_FD_exception_illegal_instruction),
       .XB_FD_exception_instruction_misaligned(XB_FD_exception_instruction_misaligned),
       .XB_FD_exception_load_misaligned(XB_FD_exception_load_misaligned),
       .XB_FD_exception_store_misaligned(XB_FD_exception_store_misaligned),
       .src_dst(FD_imm[11:0]), .d_rs1(FD_d_rs1), .uimm(FD_a_rs1),
-      .FD_pc(FD_PC), .XB_pc(XB_PC), .data_out(XB_csr_out), .csr_mepc(CSR_mepc)
+      .XB_pc(XB_PC), .data_out(XB_csr_out), 
+      .csr_mepc(CSR_mepc), .csr_mtvec(CSR_mtvec)
       );
 
    // Writeback path select
@@ -285,7 +284,7 @@ module core
    assign dm_di = FD_d_rs2;
 
    // Flush instructions on exception
-   assign FD_bubble = FD_initiate_illinst | FD_initiate_misaligned;
+   assign FD_bubble = FD_initiate_exception;
    // The main pipeline
    always @ (posedge clk, negedge resetb) begin : CORE_PIPELINE
       if (!resetb) begin

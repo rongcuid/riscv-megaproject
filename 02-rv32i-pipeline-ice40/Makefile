@@ -21,7 +21,7 @@ run_mmu_tb: compile_mmu_tb
 	./tb_out/mmu_tb
 
 tb_out/%.bin: test/%.S
-	$(AS) $^ -o $(@:.bin=.elf)
+	$(AS) -march=rv32i $^ -o $(@:.bin=.elf)
 	$(OBJCOPY) -O binary $(@:.bin=.elf) $@
 #	riscv32-unknown-elf-as $^ -o $(@:.bin=.elf)
 #	riscv32-unknown-elf-objcopy -O binary $(@:.bin=.elf) $@

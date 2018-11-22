@@ -52,9 +52,10 @@ test_csrrs:
 	csrr x1, misa
 	bne x1, x2, test_failed
 
-	# mtvec = 0
+	# mtvec = 4
+        li x2, 4
 	csrr x1, mtvec
-	bnez x1, test_failed
+	bne x1, x2, test_failed
 
 	# minstret, test2
 	csrr x1, minstret
