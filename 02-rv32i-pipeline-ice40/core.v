@@ -266,7 +266,7 @@ module core
       .XB_FD_exception_load_misaligned(XB_FD_exception_load_misaligned),
       .XB_FD_exception_store_misaligned(XB_FD_exception_store_misaligned),
       .src_dst(FD_imm[11:0]), .d_rs1(FD_d_rs1), .uimm(FD_a_rs1),
-      .FD_pc(FD_PC), .XB_pc(XB_PC), .data_out(XB_csr_out), 
+      .XB_pc(XB_PC), .data_out(XB_csr_out), 
       .csr_mepc(CSR_mepc), .csr_mtvec(CSR_mtvec)
       );
 

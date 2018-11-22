@@ -23,7 +23,7 @@ module csr_ehu
    XB_FD_exception_load_misaligned,
    XB_FD_exception_store_misaligned,
    // Data
-   src_dst, d_rs1, uimm, FD_pc, XB_pc, data_out, csr_mepc, csr_mtvec
+   src_dst, d_rs1, uimm, XB_pc, data_out, csr_mepc, csr_mtvec
    );
 `include "core/csrlist.vh"
    input wire clk, resetb, XB_bubble;
@@ -32,7 +32,7 @@ module csr_ehu
    input wire read, write, set, clear, imm;
    input wire [4:0] a_rd;
    input wire [11:0] src_dst;
-   input wire [31:0] FD_pc, XB_pc, d_rs1;
+   input wire [31:0] XB_pc, d_rs1;
    input wire [4:0]  uimm;
    input wire	     XB_FD_exception_unsupported_category;
    input wire	     XB_FD_exception_illegal_instruction;
@@ -204,7 +204,7 @@ module csr_ehu
 	    // internal pipeline of the CSR. CSR has one stage
 	    // pipeline, so even though the exception is supposed to
 	    // happen in XB stage, a CSR exception's PC is in FD stage
-	    mepc <= FD_pc;
+	    mepc <= XB_pc;
 	    mcause <= 32'd2; // Illegal Instruction
 	 end
 	 else if (FD_exception) begin

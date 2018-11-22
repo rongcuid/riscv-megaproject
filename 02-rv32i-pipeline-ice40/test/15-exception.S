@@ -83,6 +83,7 @@ handler_ecall:
 handler_exception:
 	csrrw x0, mscratch, x1
 	csrr x6, mepc
+        mv x1, x6
 	csrr x7, mcause
         li x1, 0x80000000;
         and x1, x7, x1
