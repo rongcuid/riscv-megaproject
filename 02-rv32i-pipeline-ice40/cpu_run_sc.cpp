@@ -229,7 +229,6 @@ void cpu_run_t::dump_memory()
 
 void cpu_run_t::test_thread()
 {
-  reset();
 
   std::string full_name = program + ".bin";
 
@@ -237,6 +236,7 @@ void cpu_run_t::test_thread()
     std::cerr << "Program load failed!" << std::endl;
     exit(1);
   }
+  reset();
   while(true) {
     // TODO: Test end criteria
     view_snapshot_hex();
