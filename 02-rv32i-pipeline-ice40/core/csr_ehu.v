@@ -15,7 +15,7 @@ module csr_ehu
    clk, resetb, XB_bubble,
    // Control
    read, write, set, clear, imm, a_rd,
-   initiate_illinst, initiate_misaligned,
+   initiate_exception,
    // Exception In
    XB_FD_exception_unsupported_category,
    XB_FD_exception_illegal_instruction,
@@ -23,7 +23,7 @@ module csr_ehu
    XB_FD_exception_load_misaligned,
    XB_FD_exception_store_misaligned,
    // Data
-   src_dst, d_rs1, uimm, FD_pc, XB_pc, data_out, csr_mepc
+   src_dst, d_rs1, uimm, FD_pc, XB_pc, data_out, csr_mepc, csr_mtvec
    );
 `include "core/csrlist.vh"
    input wire clk, resetb, XB_bubble;
@@ -40,16 +40,15 @@ module csr_ehu
    input wire	     XB_FD_exception_load_misaligned;
    input wire	     XB_FD_exception_store_misaligned;
    output reg [31:0] data_out;
-   output reg 	     initiate_illinst, initiate_misaligned;
+   output reg 	     initiate_exception;
    output wire [31:0] csr_mepc;
+   output wire [31:0] csr_mtvec;
    reg 		      XB_exception_illegal_instruction;
    reg [31:0] 	      mepc;
    reg [31:0] 	      mscratch, mcause, mtval;
+   reg [31:2]         mtvec;
    reg [63:0] 	      mcycle, minstret;
 
-   /* verilator lint_off UNUSED */
-   wire 	      initiate_exception;
-   /* verilator lint_on UNUSED */
    wire 	      FD_exception, XB_exception;
    // There exists an exception from FD stage
    assign FD_exception = XB_FD_exception_unsupported_category |
@@ -59,13 +58,14 @@ module csr_ehu
    		         XB_FD_exception_store_misaligned;
    // There exists an exception from XB stage
    assign XB_exception = XB_exception_illegal_instruction;
-   // There exists an exception
-   assign initiate_exception = XB_exception | FD_exception;
    // Output for PC update
    assign csr_mepc = mepc;
+   // Output for Machine Trap Vector Base Addr
+   assign csr_mtvec = {mtvec[31:2], 2'b0};
 
    // Exception Handling Unit. XB exceptions have higher priority
    // since XB instruction is senior. XB must not be a bubble
+   reg initiate_illinst, initiate_misaligned;
    always @ (*) begin : EXCEPTION_HANDLING_UNIT
       initiate_illinst
 	= ~XB_bubble & (XB_exception_illegal_instruction |
@@ -75,6 +75,8 @@ module csr_ehu
 	= ~XB_bubble & (XB_FD_exception_instruction_misaligned |
       			XB_FD_exception_load_misaligned |
       			XB_FD_exception_store_misaligned);
+
+      initiate_exception = initiate_illinst | initiate_misaligned;
    end
 
    // The operand to operate on target CSR
@@ -95,6 +97,7 @@ module csr_ehu
 	 minstret <= 64'b0;
 	 mepc <= 32'bX;
 	 data_out <= 32'bX;
+         mtvec[31:2] <= 30'h1; // or, 0x4
       end
       else if (clk) begin
 	 /* verilator lint_off BLKSEQ */
@@ -124,7 +127,10 @@ module csr_ehu
 	   end
 	   `CSR_MTVEC: begin
 	      // Direct
-	      if (really_read) data_out <= 32'b0;
+	      if (really_read) data_out <= {mtvec[31:2], 2'b0};
+              if (really_write) mtvec[31:2] <= operand[31:2];
+              if (really_set) mtvec[31:2] <= mtvec[31:2] | operand[31:2];
+              if (really_clear) mtvec[31:2] <= mtvec[31:2] & ~operand[31:2];
 	   end
 	   `CSR_MSCRATCH: begin
 	      if (really_read) data_out <= mscratch;
