@@ -2,6 +2,7 @@
 
 #include <sstream>
 #include <fstream>
+#include <iomanip>
 
 #include "rom_1024x32_t.hpp"
 #include "Vcore_top.h"
@@ -130,7 +131,7 @@ public:
 		<< ", FD_PC=0x" 
                 << std::hex 
                 << FD_PC
-		<< ", x1 = 0x" << std::uppercase << std::hex
+		<< ", x1 = 0x" << std::hex
 		<< dut->core_top->CPU0->RF->data[1]
 		<< std::endl;
   }
@@ -213,18 +214,26 @@ std::string bv_to_opcode(const sc_bv<256>& bv)
 void cpu_run_t::dump_memory()
 {
   bool begin_dump = false;
+  ofstream f("mem.log");
   for (int i=0; i<1024; ++i) {
     uint32_t word = instruction_rom->data[i];
+    if (f.is_open()) {
+      f << std::setfill('0') << std::setw(8) 
+        << std::hex << word << std::endl;
+    }
+//    std::cout << "(DD) " << std::setfill('0') << std::setw(8) 
+//      << std::hex << word << std::endl;
     if (begin_dump) {
+      if (word == 0xdeaddead) {
+        break;
+      }
       std::cout << "(TT) " << std::hex << word << std::endl;
     }
     if (word == 0xdeadc0de) {
       begin_dump = true;
     }
-    if (word == 0xdeaddead) {
-      break;
-    }
   }
+  f.close();
 }
 
 void cpu_run_t::test_thread()
