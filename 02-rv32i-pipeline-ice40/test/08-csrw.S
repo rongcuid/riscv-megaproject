@@ -27,6 +27,12 @@ test_csrw:
 	csrw mcause, x2
 	csrr x1, mcause
 	bne x1, x2, test_failed
+
+        # mtvec
+        li x2, 0x8
+        csrw mtvec, x2
+        csrr x1, mtvec
+        bne x1, x2, test_failed
 	
 	# mtval. May be called mbadaddr
 	li x2, 0x1

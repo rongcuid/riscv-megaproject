@@ -27,6 +27,12 @@ test_csrci:
 	csrci mcause, 0x1
 	csrr x1, mcause
 	bnez x1, test_failed
+
+	# mtvec
+	csrwi mtvec, 0xC
+	csrci mtvec, 0xC
+	csrr x1, mtvec
+	bnez x1, test_failed
 	
 	# mtval. May be called mbadaddr
 	csrwi mbadaddr, 0x1
