@@ -30,8 +30,9 @@ test_csrc:
 	bnez x1, test_failed
 
 	# mtvec
+        li x3, 0xC
 	csrwi mtvec, 0xC
-	csrc mtvec, x2
+	csrc mtvec, x3
 	csrr x1, mtvec
 	bnez x1, test_failed
 	
