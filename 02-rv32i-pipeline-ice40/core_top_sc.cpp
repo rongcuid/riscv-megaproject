@@ -98,9 +98,9 @@ public:
   
   bool load_program(const std::string& path);
 
-  bool report_failure(uint32_t prev_PC) 
+  bool report_failure(uint32_t failure_vec, uint32_t prev_PC) 
   {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
+      if (FD_PC == failure_vec || FD_disasm_opcode.read() == "ILLEGAL ") {
 	std::cout << "(TT) Test failed! prevPC = 0x" 
           << std::hex << prev_PC << std::endl;
         return true;
@@ -368,7 +368,7 @@ void cpu_top_tb_t::test7()
     reset();
     uint32_t prev_PC = 0;
     for (int i=0; i<48; ++i) {
-      if (report_failure(prev_PC)) break;
+      if (report_failure(0x10, prev_PC)) break;
       prev_PC = FD_PC;
       wait();
     }
@@ -390,7 +390,7 @@ void cpu_top_tb_t::test8()
     reset();
     uint32_t prev_PC = 0;
     for (int i=0; i<48; ++i) {
-      if (report_failure(prev_PC)) break;
+      if (report_failure(0x10, prev_PC)) break;
       prev_PC = FD_PC;
       wait();
     }
@@ -412,7 +412,7 @@ void cpu_top_tb_t::test9()
     reset();
     uint32_t prev_PC = 0;
     for (int i=0; i<48; ++i) {
-      if (report_failure(prev_PC)) break;
+      if (report_failure(0x10, prev_PC)) break;
       prev_PC = FD_PC;
       wait();
     }
@@ -432,10 +432,10 @@ void cpu_top_tb_t::test10()
   }
   else {
     reset();
+    uint32_t prev_PC = 0;
     for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -575,7 +575,7 @@ void cpu_top_tb_t::test_thread()
   test7();
   test8();
   test9();
-  //test10();
+  test10();
   //test11();
   //test12();
   //test13();
