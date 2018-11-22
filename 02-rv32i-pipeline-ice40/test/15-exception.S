@@ -87,6 +87,7 @@ handler_exception:
         li x1, 0x80000000;
         and x1, x7, x1
         beqz x1, jump_exception;
+        j exit_exception
 
 jump_interrupt:
         j test_failed # No interrupts here
