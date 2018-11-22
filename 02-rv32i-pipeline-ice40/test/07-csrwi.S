@@ -44,13 +44,13 @@ test_csrwi:
 	bne x1, x2, test_failed
 	
 	# mcycle
-	csrwi mcycle, 0
-        csrr x1, mcycle
-        bnez x1, test_failed
 	csrwi mcycle, 0xE
 	li x2, 0xF
 	csrr x1, mcycle
 	bne x1, x2, test_failed
+	csrwi mcycle, 0
+        csrr x1, mcycle
+        beqz x1, test_failed
 
 	# minstret
 	csrwi minstret, 0x1
