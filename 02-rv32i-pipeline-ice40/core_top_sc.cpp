@@ -490,6 +490,7 @@ void cpu_top_tb_t::test13()
     reset();
     uint32_t prev_PC = 0;
     for (int i=0; i<48; ++i) {
+      view_snapshot_int();
       if (report_failure(0x10, prev_PC)) break;
       prev_PC = FD_PC;
       wait();
