@@ -8,10 +8,14 @@ all: run_compliance_quick
 run_compliance: compile_cpu_run
 	cd riscv-compliance && make
 
-COMPLIANCE_TEST=I-ENDIANESS-01
+#COMPLIANCE_TEST=I-ENDIANESS-01
+#COMPLIANCE_TEST=I-ADD-01
+#COMPLIANCE_TEST=I-ADDI-01
 
 run_compliance_quick: compile_cpu_run compile_compliance_quick
-	./tb_out/cpu_run tb_out/$(COMPLIANCE_TEST).elf
+	./tb_out/cpu_run tb_out/$(COMPLIANCE_TEST).elf | tee tb_out/run.out 
+	grep '(DD)' tb_out/run.out | cut -d' ' -f 2 > tb_out/result.log
+	diff tb_out/result.log riscv-compliance/riscv-test-suite/rv32i/references/$(COMPLIANCE_TEST).reference_output
 
 compile_compliance_quick:
 	$(CC) -march=rv32i -mabi=ilp32 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Iriscv-compliance/riscv-test-env/ -Iriscv-compliance/riscv-test-env/msc/ -Iriscv-compliance/riscv-target/msc-02/ -Triscv-compliance/riscv-test-env/msc/link.ld riscv-compliance/riscv-test-suite/rv32i/src/$(COMPLIANCE_TEST).S -o tb_out/$(COMPLIANCE_TEST).elf

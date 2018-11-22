@@ -29,8 +29,13 @@ class rom_1024x32_t : public sc_module
       }
     }
 
+    void clear_memory() {
+      for (int i=0; i<1024; ++i) data[i] = 0;
+      update.write(!update.read());
+    }
     bool load_binary(const std::string& path)
     {
+      clear_memory();
       ifstream f(path, std::ios::binary);
       if (f.is_open()) {
         std::vector<unsigned char> buf

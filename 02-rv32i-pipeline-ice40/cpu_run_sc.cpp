@@ -42,7 +42,8 @@ public:
 
   sc_signal<uint32_t> io_memory_tb[64];
 
-  sc_signal<bool> test_passes, test_fails, test_halt;
+  bool test_passes, test_fails, test_halt;
+  uint32_t test_result_base_addr;
 
   SC_HAS_PROCESS(cpu_run_t);
   cpu_run_t(sc_module_name name, const std::string& path)
@@ -61,9 +62,6 @@ public:
     , io_data_write_tb("io_data_write_tb")
     , FD_disasm_opcode("FD_disasm_opcode")
     , FD_PC("FD_PC")
-    , test_passes("test_passes")
-    , test_fails("test_fails")
-    , test_halt("test_halt")
   {
     SC_THREAD(io_thread);
     sensitive << io_addr_tb;
@@ -81,6 +79,8 @@ public:
     sensitive << io_data_write_tb;
 
     SC_CTHREAD(test_thread, clk_tb.pos());
+
+    test_result_base_addr = 0;
 
     instruction_rom = new rom_1024x32_t("im_rom");
     instruction_rom->addr1(rom_addr_tb);
@@ -106,6 +106,7 @@ public:
 
   ~cpu_run_t()
   {
+    delete instruction_rom;
     delete dut;
   }
 
@@ -117,7 +118,27 @@ public:
     wait();
   }
 
+  uint32_t get_memory_word(uint32_t i) 
+  {
+    uint32_t word = 0;
+    word |= dut->core_top->MMU0->ram0->RAM[i];
+    word |= dut->core_top->MMU0->ram1->RAM[i] << 8;
+    word |= dut->core_top->MMU0->ram2->RAM[i] << 16;
+    word |= dut->core_top->MMU0->ram3->RAM[i] << 24;
+    return word;
+  }
+
+  void initialize_memory() 
+  {
+    for (int i=0; i<1024; ++i) {
+    dut->core_top->MMU0->ram0->RAM[i] = 0xAA;
+    dut->core_top->MMU0->ram1->RAM[i] = 0xAA;
+    dut->core_top->MMU0->ram2->RAM[i] = 0xAA;
+    dut->core_top->MMU0->ram3->RAM[i] = 0xAA;
+    }
+  }
   void dump_memory();
+  void scan_memory_for_base_address();
 
   void view_snapshot_pc()
   {
@@ -176,21 +197,24 @@ void cpu_run_t::io_thread()
 void cpu_run_t::tb_handshake()
 {
   while (true) {
-    test_passes.write(false);
-    test_fails.write(false);
-    test_halt.write(false);
+    test_passes = false;
+    test_fails = false;
+    test_halt = false;
     if (io_en_tb.read() && io_we_tb.read()) {
       // IO domain address is 0x0
       if (io_addr_tb.read() == 0) {
         switch (io_data_write_tb.read()) {
+          case 0:
+            scan_memory_for_base_address();
+            break;
           case 1:
-            test_passes.write(true);
+            test_passes = true;
             break;
           case 2:
-            test_fails.write(true);
+            test_fails = true;
             break;
           case 3:
-            test_halt.write(true);
+            test_halt = true;
             break;
           default:
             assert(false && "Invalid testbench command");
@@ -213,39 +237,43 @@ std::string bv_to_opcode(const sc_bv<256>& bv)
   return op;
 }
 
+void cpu_run_t::scan_memory_for_base_address()
+{
+  bool tail = false;
+  for (int i=1023; i>=0; --i) {
+    uint32_t word = get_memory_word(i);
+    if (!tail) {
+      if (word == 0xDEADDEAD) tail = true;
+    }
+    else {
+      if (word != 0xFFFFFFFF) {
+        test_result_base_addr = (i+1) << 2;
+        return;
+      }
+    }
+  }
+}
+
 void cpu_run_t::dump_memory()
 {
   bool begin_dump = false;
-  bool align_skipped = false;
+  //bool align_skipped = false;
+  bool align_skipped = true;
   ofstream f("mem.log");
-  for (int i=0; i<1024; ++i) {
-    uint32_t word = 0;
-    word |= dut->core_top->MMU0->ram0->RAM[i];
-    word |= dut->core_top->MMU0->ram1->RAM[i] << 8;
-    word |= dut->core_top->MMU0->ram2->RAM[i] << 16;
-    word |= dut->core_top->MMU0->ram3->RAM[i] << 24;
+  int i = test_result_base_addr >> 2;
+  assert(i < 1024);
+  for (; i<1024; ++i) {
+    uint32_t word = get_memory_word(i);
     if (f.is_open()) {
       f << std::setfill('0') << std::setw(8) 
         << std::hex << word << std::endl;
     }
-    //    std::cout << "(DD) " << std::setfill('0') << std::setw(8) 
-    //      << std::hex << word << std::endl;
-    if (begin_dump) {
-      if (align_skipped) {
-        if (word == 0xdeaddead) {
-          break;
-        }
-        std::cout << "(DD) " 
-          << std::setfill('0') << std::setw(8)
-          << std::hex << word << std::endl;
-      }
-      else {
-        align_skipped = true;
-      }
+    if (word == 0xdeaddead) {
+      break;
     }
-    if (word == 0xdeadc0de) {
-      begin_dump = true;
-    }
+    std::cout << "(DD) " 
+      << std::setfill('0') << std::setw(8)
+      << std::hex << word << std::endl;
   }
   f.close();
 }
@@ -255,6 +283,8 @@ void cpu_run_t::test_thread()
 
   std::string full_name = program + ".bin";
 
+  initialize_memory();
+
   if (!load_program(full_name)) {
     std::cerr << "Program load failed!" << std::endl;
     exit(1);
@@ -263,13 +293,13 @@ void cpu_run_t::test_thread()
   for (int i=0; i<4096; ++i) {
     // TODO: Test end criteria
     view_snapshot_hex();
-    if (test_passes.read()) {
+    if (test_passes) {
       std::cout << "A test passes!" << std::endl;
     }
-    if (test_fails.read()) {
+    if (test_fails) {
       std::cout << "A test fails at PC=0x" << std::hex << FD_PC << std::endl;
     }
-    if (test_halt.read()) {
+    if (test_halt) {
       std::cout << "End of the test." << std::endl;
       break;
     }
