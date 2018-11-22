@@ -39,6 +39,8 @@ public:
 
   sc_signal<uint32_t> io_memory_tb[64];
 
+  sc_signal<bool> test_passes, test_fails, test_halt;
+
   SC_HAS_PROCESS(cpu_run_t);
   cpu_run_t(sc_module_name name, const std::string& path)
     : sc_module(name)
@@ -56,6 +58,9 @@ public:
     , io_data_write_tb("io_data_write_tb")
     , FD_disasm_opcode("FD_disasm_opcode")
     , FD_PC("FD_PC")
+    , test_passes("test_passes")
+    , test_fails("test_fails")
+    , test_halt("test_halt")
   {
     SC_THREAD(io_thread);
     sensitive << io_addr_tb;
@@ -65,6 +70,12 @@ public:
       io_memory_tb[i] = sc_signal<uint32_t>(ss.str().c_str());
       sensitive << io_memory_tb[i];
     }
+
+    SC_THREAD(tb_handshake);
+    sensitive << io_en_tb;
+    sensitive << io_we_tb;
+    sensitive << io_addr_tb;
+    sensitive << io_data_write_tb;
 
     SC_CTHREAD(test_thread, clk_tb.pos());
 
@@ -136,6 +147,7 @@ public:
   }
 
   void io_thread(void);
+  void tb_handshake(void);
   
   bool load_program(const std::string& path)
   {
@@ -153,6 +165,36 @@ void cpu_run_t::io_thread()
     uint32_t addrw32 = io_addr_tb.read();
     uint32_t addrw6 = (addrw32 >> 2) % 64;
     io_data_read_tb.write(io_memory_tb[addrw6].read());
+    wait();
+  }
+}
+
+// Handshake happens when 0x80000000 writes non-zero
+void cpu_run_t::tb_handshake()
+{
+  while (true) {
+    test_passes.write(false);
+    test_fails.write(false);
+    test_halt.write(false);
+    if (io_en_tb.read() && io_we_tb.read()) {
+      // IO domain address is 0x0
+      if (io_addr_tb.read() == 0) {
+        switch (io_data_write_tb.read()) {
+          case 1:
+            test_passes.write(true);
+            break;
+          case 2:
+            test_fails.write(true);
+            break;
+          case 3:
+            test_halt.write(true);
+            break;
+          default:
+            assert(false && "Invalid testbench command");
+            break;
+        }
+      }
+    }
     wait();
   }
 }
@@ -189,11 +231,23 @@ void cpu_run_t::test_thread()
 {
   reset();
 
-  load_program(program + ".bin");
+  std::string full_name = program + ".bin";
+
+  if (!load_program(full_name)) {
+    std::cerr << "Program load failed!" << std::endl;
+    exit(1);
+  }
   while(true) {
-    // TODO: Test end criteria: in exception and a0/x9 = 0xbaad900d
+    // TODO: Test end criteria
     view_snapshot_hex();
-    if (FD_PC == 0x04 && dut->core_top->CPU0->RF->data[9] == 0xbaad900d) {
+    if (test_passes.read()) {
+      std::cout << "A test passes!" << std::endl;
+    }
+    if (test_fails.read()) {
+      std::cout << "A test fails at PC=0x" << std::hex << FD_PC << std::endl;
+    }
+    if (test_halt.read()) {
+      std::cout << "End of the test." << std::endl;
       break;
     }
     wait();

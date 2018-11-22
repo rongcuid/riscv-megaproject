@@ -1,8 +1,11 @@
 RISCV_PREFIX ?= riscv32-unknown-elf-
 AS=$(RISCV_PREFIX)as
 OBJCOPY=$(RISCV_PREFIX)objcopy
-all: compile_cpu_run
+all: run_compliance
 #	echo "(MM) Compiling and running all tests"
+
+run_compliance: compile_cpu_run
+	cd riscv-compliance && make
 
 compile_regfile_tb: regfile.v regfile_sc.cpp
 #	echo "(MM) Compiling Regfile testbench"
