@@ -537,7 +537,7 @@ void cpu_top_tb_t::test15()
     reset();
     uint32_t prev_PC = 0;
     for (int i=0; i<384; ++i) {
-      view_snapshot_hex();
+//      view_snapshot_hex();
       if (report_failure(0x0C, prev_PC)) break;
       prev_PC = FD_PC;
       wait();

@@ -69,7 +69,7 @@ test_illegal_csr:
 
 test_ecall:
         ecall 
-        li x4, 11 # M-mode ecall
+        li x4, 2 # Ecall as exception
         li x5, 0xDC
         bne x1, x3, test_failed
         bne x5, x6, test_failed
