@@ -64,4 +64,16 @@ test_csrw:
 	csrr x1, minstreth
 	bne x1, x2, test_failed
 
+        # mstatus
+        li x2, 0b11111111111111111110011101110111
+        csrw mstatus, x2
+        csrr x1, mstatus
+        li x3, 0b00000000000000000001100000000000
+        bne x1, x3, test_failed
+        li x2, 0b00000000000000000000000010001000
+        csrw mstatus, x2
+        csrr x1, mstatus
+        li x3, 0b00000000000000000001100010001000
+        bne x1, x3, test_failed
+
 	j main

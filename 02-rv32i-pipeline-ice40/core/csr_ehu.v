@@ -49,6 +49,7 @@ module csr_ehu
    reg [31:0] 	      mepc;
    reg [31:0] 	      mscratch, mcause, mtval;
    reg [31:2]         mtvec;
+   reg mpie, mie;
    reg [63:0] 	      mcycle, minstret;
 
    wire 	      FD_exception, XB_exception;
@@ -104,11 +105,16 @@ module csr_ehu
 	 mepc <= 32'bX;
 	 data_out <= 32'bX;
          mtvec[31:2] <= 30'h1; // or, 0x4
+         // No interrupt on reset
+         mpie <= 1'b0;
+         mie <= 1'b0;
       end
       else if (clk) begin
 	 /* verilator lint_off BLKSEQ */
 	 XB_exception_illegal_instruction = 1'b0;
 	 mcycle <= mcycle + 64'b1;
+         // On trap, mpie is updated
+         if (initiate_exception) mpie <= mie;
 	 if (!XB_bubble) begin
 	    // Instruction is committed when it is not a bubble
 	    minstret <= minstret + 64'b1;
@@ -127,6 +133,22 @@ module csr_ehu
 	   `CSR_MHARTID: begin
 	      if (really_read) data_out <= 32'b0;
 	   end
+           `CSR_MSTATUS: begin
+             if (really_read) 
+               data_out <= {19'b0,2'b11,3'b0,mpie,3'b0,mie,3'b0};
+             if (really_write) begin
+               mpie <= operand[7];
+               mie <= operand[3];
+             end
+             if (really_set) begin
+               mpie <= operand[7] ? 1 : mpie;
+               mie <= operand[3] ? 1 : mie;
+             end
+             if (really_clear) begin
+               mpie <= operand[7] ? 0 : mpie;
+               mie <= operand[3] ? 0 : mie;
+             end
+           end
 	   `CSR_MISA: begin
 	      // 32-bit, I subset. Read RISC-V Spec Vol 2
 	      if (really_read) data_out <= 32'b0100_0000_0000_0000_0000_0001_0000_0000;
