@@ -71,11 +71,9 @@ public:
       io_memory_tb[i] = sc_signal<uint32_t>(ss.str().c_str());
       sensitive << io_memory_tb[i];
     }
-
-    SC_THREAD(tb_handshake);
     sensitive << io_en_tb;
     sensitive << io_we_tb;
-    sensitive << io_addr_tb;
+    sensitive << io_data_read_tb;
     sensitive << io_data_write_tb;
 
     SC_CTHREAD(test_thread, clk_tb.pos());
@@ -170,7 +168,7 @@ public:
   }
 
   void io_thread(void);
-  void tb_handshake(void);
+  //void tb_handshake(void);
   
   bool load_program(const std::string& path)
   {
@@ -188,14 +186,7 @@ void cpu_run_t::io_thread()
     uint32_t addrw32 = io_addr_tb.read();
     uint32_t addrw6 = (addrw32 >> 2) % 64;
     io_data_read_tb.write(io_memory_tb[addrw6].read());
-    wait();
-  }
-}
 
-// Handshake happens when 0x80000000 writes non-zero
-void cpu_run_t::tb_handshake()
-{
-  while (true) {
     test_passes = false;
     test_fails = false;
     test_halt = false;
@@ -224,6 +215,14 @@ void cpu_run_t::tb_handshake()
     wait();
   }
 }
+
+// Handshake happens when 0x80000000 writes non-zero
+//void cpu_run_t::tb_handshake()
+//{
+//  while (true) {
+//    wait();
+//  }
+//}
 
 std::string bv_to_opcode(const sc_bv<256>& bv)
 {
