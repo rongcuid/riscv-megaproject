@@ -28,6 +28,13 @@ test_csrc:
 	csrc mcause, x2
 	csrr x1, mcause
 	bnez x1, test_failed
+
+	# mtvec
+        li x3, 0xC
+	csrwi mtvec, 0xC
+	csrc mtvec, x3
+	csrr x1, mtvec
+	bnez x1, test_failed
 	
 	# mtval. May be called mbadaddr
 	csrwi mbadaddr, 0x1
@@ -58,5 +65,19 @@ test_csrc:
 	csrc minstreth, x2
 	csrr x1, minstreth
 	bnez x1, test_failed
+
+        # mstatus
+        li x2, 0b00000000000000000000000010001000
+        csrs mstatus, x2
+        li x2, 0b1100000000000
+        csrc mstatus, x2
+        csrr x1, mstatus
+        li x3, 0b00000000000000000001100010001000
+        bne x1, x3, test_failed
+        li x2, 0xFFFFFFFF
+        csrc mstatus, x2
+        csrr x1, mstatus
+        li x3, 0b00000000000000000001100000000000
+        bne x1, x3, test_failed
 
 	j main

@@ -1,23 +1,32 @@
 #include <systemc.h>
 
 #include <sstream>
-#include <fstream>
+#include <iomanip>
 
+#include "rom_1024x32_t.hpp"
 #include "Vcore_top.h"
 #include "Vcore_top_core_top.h"
 #include "Vcore_top_core.h"
 #include "Vcore_top_regfile.h"
+
+std::string bv_to_opcode(const sc_bv<256>& bv);
+
+//////////////////////////////////////////////////
 
 class cpu_top_tb_t : public sc_module
 {
 public:
   Vcore_top* dut;
 
+  rom_1024x32_t* instruction_rom;
+
   sc_in<bool> clk_tb;
   sc_signal<bool> resetb_tb;
 
   sc_signal<uint32_t> rom_addr_tb;
   sc_signal<uint32_t> rom_data_tb;
+  sc_signal<uint32_t> rom_addr_2_tb;
+  sc_signal<uint32_t> rom_data_2_tb;
   
   sc_signal<uint32_t> io_addr_tb;
   sc_signal<bool> io_en_tb;
@@ -30,7 +39,6 @@ public:
 
   sc_signal<uint32_t> FD_PC;
 
-  sc_signal<uint32_t> instruction_memory_tb[1024];
   sc_signal<uint32_t> io_memory_tb[64];
 
   SC_CTOR(cpu_top_tb_t)
@@ -38,6 +46,8 @@ public:
     , resetb_tb("resetb_tb")
     , rom_addr_tb("rom_addr_tb")
     , rom_data_tb("rom_data_tb")
+    , rom_addr_2_tb("rom_addr_2_tb")
+    , rom_data_2_tb("rom_data_2_tb")
     , io_addr_tb("io_addr_tb")
     , io_en_tb("io_en_tb")
     , io_we_tb("io_we_tb")
@@ -46,15 +56,6 @@ public:
     , FD_disasm_opcode("FD_disasm_opcode")
     , FD_PC("FD_PC")
   {
-    SC_THREAD(im_thread);
-    sensitive << rom_addr_tb;
-    for (int i=0; i<1024; ++i) {
-      std::stringstream ss;
-      ss << "instruction_memory_" << i;
-      instruction_memory_tb[i] = sc_signal<uint32_t>(ss.str().c_str());
-      sensitive << instruction_memory_tb[i];
-    }
-
     SC_THREAD(io_thread);
     sensitive << io_addr_tb;
     for (int i=0; i<64; ++i) {
@@ -66,11 +67,19 @@ public:
 
     SC_CTHREAD(test_thread, clk_tb.pos());
 
+    instruction_rom = new rom_1024x32_t("im_rom");
+    instruction_rom->addr1(rom_addr_tb);
+    instruction_rom->addr2(rom_addr_2_tb);
+    instruction_rom->data1(rom_data_tb);
+    instruction_rom->data2(rom_data_2_tb);
+
     dut = new Vcore_top("dut");
     dut->clk(clk_tb);
     dut->resetb(resetb_tb);
     dut->rom_addr(rom_addr_tb);
     dut->rom_data(rom_data_tb);
+    dut->rom_addr_2(rom_addr_2_tb);
+    dut->rom_data_2(rom_data_2_tb);
     dut->io_addr(io_addr_tb);
     dut->io_en(io_en_tb);
     dut->io_we(io_we_tb);
@@ -93,11 +102,53 @@ public:
     wait();
   }
 
-  void im_thread(void);
   void io_thread(void);
   
-  bool load_program(const std::string& path);
+  bool load_program(const std::string& path)
+  {
+    instruction_rom->load_binary(path);
+  }
 
+  bool report_failure(uint32_t failure_vec, uint32_t prev_PC) 
+  {
+      if (FD_PC == failure_vec || FD_disasm_opcode.read() == "ILLEGAL ") {
+	std::cout << "(TT) Test failed! prevPC = 0x" 
+          << std::hex << prev_PC << std::endl;
+        return true;
+      }
+      return false;
+  }
+
+  void view_snapshot_pc()
+  {
+      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+		<< ", FD_PC=0x" 
+                << std::hex 
+                << FD_PC
+		<< std::endl;
+  }
+  void view_snapshot_hex()
+  {
+      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+		<< ", FD_PC=0x" 
+                << std::hex 
+                << FD_PC
+		<< ", x1 = 0x" << std::uppercase << std::hex
+		<< dut->core_top->CPU0->RF->data[1]
+		<< std::endl;
+  }
+
+  void view_snapshot_int()
+  {
+      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+		<< ", FD_PC=0x" 
+                << std::hex 
+                << FD_PC
+		<< ", x1 = "
+                << std::dec
+		<< static_cast<int32_t>(dut->core_top->CPU0->RF->data[1])
+		<< std::endl;
+  }
   void test_thread(void);
 
   void test0(void);
@@ -118,16 +169,6 @@ public:
   void test15(void);
 };
 
-void cpu_top_tb_t::im_thread()
-{
-  while(true) {
-    uint32_t addrw32 = rom_addr_tb.read();
-    uint32_t addrw9 = addrw32 % 1024;
-    rom_data_tb.write(instruction_memory_tb[addrw9].read());
-    wait();
-  }
-}
-
 void cpu_top_tb_t::io_thread()
 {
   while(true) {
@@ -135,28 +176,6 @@ void cpu_top_tb_t::io_thread()
     uint32_t addrw6 = (addrw32 >> 2) % 64;
     io_data_read_tb.write(io_memory_tb[addrw6].read());
     wait();
-  }
-}
-
-bool cpu_top_tb_t::load_program(const std::string& path)
-{
-  ifstream f(path, std::ios::binary);
-  if (f.is_open()) {
-    std::vector<unsigned char> buf
-      (std::istreambuf_iterator<char>(f), {});
-    size_t size = buf.size();
-    if (size == 0) return false;
-    if (size % 4 != 0) return false;
-    
-    auto words = (uint32_t*) buf.data();
-    for (int i=0; i<size/4; ++i) {
-      instruction_memory_tb[i].write(words[i]);
-    }
-    f.close();
-    return true;
-  }
-  else {
-    return false;
   }
 }
 
@@ -188,9 +207,7 @@ void cpu_top_tb_t::test0()
   else {
     reset();
     for (int i=0; i<12; ++i) {
-      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
-		<< ", FD_PC=0x" << std::hex << FD_PC
-		<< std::endl;
+      view_snapshot_pc();
       wait();
     }
   }
@@ -212,11 +229,7 @@ void cpu_top_tb_t::test1()
   else {
     reset();
     for (int i=0; i<20; ++i) {
-      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
-		<< ", FD_PC=0x" << std::hex << FD_PC
-		<< ", x1 = " << std::dec
-		<< static_cast<int32_t>(dut->core_top->CPU0->RF->data[1])
-		<< std::endl;
+      view_snapshot_int();
       wait();
     }
   }
@@ -228,7 +241,7 @@ void cpu_top_tb_t::test2()
     << "(TT) --------------------------------------------------" << std::endl
     << "(TT) Test 2: OP Test " << std::endl
     << "(TT) 1. Waveform must be inspected" << std::endl
-    << "(TT) 2. OP's start at PC=14. x1 has 2 clock delay" << std::endl
+    << "(TT) 2. OP's start at PC=14." << std::endl
     << "(TT) 3. x1=4,3,1,0,1,0,1,2,4,2,-2,-1,1,0,1" << std::endl
     << "(TT) 4. Loops to 0x0C at 50" << std::endl
     << "(TT) --------------------------------------------------" << std::endl;
@@ -239,11 +252,7 @@ void cpu_top_tb_t::test2()
   else {
     reset();
     for (int i=0; i<24; ++i) {
-      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
-		<< ", FD_PC=0x" << std::hex << FD_PC
-		<< ", x1 = " << std::dec
-		<< static_cast<int32_t>(dut->core_top->CPU0->RF->data[1])
-		<< std::endl;
+      view_snapshot_int();
       wait();
     }
   }
@@ -263,9 +272,7 @@ void cpu_top_tb_t::test3()
     reset();
 
     for (int i=0; i<48; ++i) {
-      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
-		<< ", FD_PC=0x" << std::hex << FD_PC
-		<< std::endl;
+      view_snapshot_pc();
       wait();
     }
   }
@@ -287,11 +294,7 @@ void cpu_top_tb_t::test4()
   else {
     reset();
     for (int i=0; i<16; ++i) {
-      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
-		<< ", FD_PC=0x" << std::hex << FD_PC
-		<< ", x1 = " << std::hex
-		<< dut->core_top->CPU0->RF->data[1]
-		<< std::endl;
+      view_snapshot_hex();
       wait();
     }
   }
@@ -312,12 +315,8 @@ void cpu_top_tb_t::test5()
   else {
     reset();
     for (int i=0; i<16; ++i) {
-      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
-		<< ", FD_PC=0x" << std::hex << FD_PC
-		<< ", x1 = " << std::hex
-		<< dut->core_top->CPU0->RF->data[1]
-		<< std::endl;
-		   wait();
+      view_snapshot_hex();
+      wait();
     }
   }
 }
@@ -336,7 +335,7 @@ void cpu_top_tb_t::test6()
   }
   else {
     reset();
-    for (int i=0; i<48; ++i) {
+    for (int i=0; i<96; ++i) {
       if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
 	std::cout << "(TT) Test failed!" << std::endl;
       }
@@ -357,10 +356,11 @@ void cpu_top_tb_t::test7()
   }
   else {
     reset();
-    for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+    uint32_t prev_PC = 0;
+    for (int i=0; i<96; ++i) {
+      //view_snapshot_int();
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -379,10 +379,10 @@ void cpu_top_tb_t::test8()
   }
   else {
     reset();
-    for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+    uint32_t prev_PC = 0;
+    for (int i=0; i<96; ++i) {
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -401,10 +401,10 @@ void cpu_top_tb_t::test9()
   }
   else {
     reset();
-    for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+    uint32_t prev_PC = 0;
+    for (int i=0; i<96; ++i) {
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -423,10 +423,10 @@ void cpu_top_tb_t::test10()
   }
   else {
     reset();
-    for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+    uint32_t prev_PC = 0;
+    for (int i=0; i<96; ++i) {
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -445,10 +445,10 @@ void cpu_top_tb_t::test11()
   }
   else {
     reset();
-    for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+    uint32_t prev_PC = 0;
+    for (int i=0; i<96; ++i) {
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -467,10 +467,11 @@ void cpu_top_tb_t::test12()
   }
   else {
     reset();
-    for (int i=0; i<48; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+    uint32_t prev_PC = 0;
+    for (int i=0; i<96; ++i) {
+      //view_snapshot_hex();
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -489,15 +490,11 @@ void cpu_top_tb_t::test13()
   }
   else {
     reset();
-    for (int i=0; i<12; ++i) {
-      // std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
-      // 		<< ", FD_PC=0x" << std::hex << FD_PC
-      // 		<< ", x1 = " << std::hex
-      // 		<< dut->core_top->CPU0->RF->data[1]
-      // 		<< std::endl;
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+    uint32_t prev_PC = 0;
+    for (int i=0; i<48; ++i) {
+      //view_snapshot_int();
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -516,10 +513,11 @@ void cpu_top_tb_t::test14()
   }
   else {
     reset();
-    for (int i=0; i<80; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+    uint32_t prev_PC = 0;
+    for (int i=0; i<160; ++i) {
+      //view_snapshot_hex();
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }
@@ -538,15 +536,11 @@ void cpu_top_tb_t::test15()
   }
   else {
     reset();
-    for (int i=0; i<256; ++i) {
-      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
-		<< ", FD_PC=0x" << std::hex << FD_PC
-		<< ", x1 = " << std::hex
-		<< dut->core_top->CPU0->RF->data[1]
-		<< std::endl;
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+    uint32_t prev_PC = 0;
+    for (int i=0; i<384; ++i) {
+//      view_snapshot_hex();
+      if (report_failure(0x0C, prev_PC)) break;
+      prev_PC = FD_PC;
       wait();
     }
   }

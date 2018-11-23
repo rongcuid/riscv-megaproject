@@ -33,6 +33,14 @@ test_csrs:
 	csrr x1, mcause
 	li x2, 0x5
 	bne x1, x2, test_failed
+
+	# mtvec
+	li x3, 0x8
+	csrwi mtvec, 0x1
+	csrs mtvec, x3
+	csrr x1, mtvec
+	li x2, 0x8
+	bne x1, x2, test_failed
 	
 	# mtval. May be called mbadaddr
 	li x3, 0x8
@@ -73,5 +81,17 @@ test_csrs:
 	li x2, 0x3
 	csrr x1, minstreth
 	bne x1, x2, test_failed
+
+        # mstatus
+        li x2, 0b11111111111111111110011101110111
+        csrs mstatus, x2
+        csrr x1, mstatus
+        li x3, 0b00000000000000000001100000000000
+        bne x1, x3, test_failed
+        li x2, 0b00000000000000000000000010001000
+        csrs mstatus, x2
+        csrr x1, mstatus
+        li x3, 0b00000000000000000001100010001000
+        bne x1, x3, test_failed
 
 	j main

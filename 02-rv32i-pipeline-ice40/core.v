@@ -63,13 +63,14 @@ module core
    /* verilator lint_on UNUSED */   
    wire 	     FD_exception_unsupported_category;
    wire 	     FD_exception_illegal_instruction;
+   //wire 	     FD_exception_ecall;
    reg 		     FD_exception_instruction_misaligned;
    wire 	     FD_exception_load_misaligned;
    wire 	     FD_exception_store_misaligned;
    output wire [255:0] FD_disasm_opcode;
 
    // Program Counter
-   wire 	     FD_initiate_illinst, FD_initiate_misaligned;
+   wire 	     FD_initiate_exception;
    output reg [31:0] FD_PC;
    reg [31:0] 	     nextPC;
 
@@ -92,6 +93,7 @@ module core
    reg [31:0]  XB_aluop1_sel, XB_aluop2_sel, XB_alu_op;
    reg 	       XB_FD_exception_unsupported_category;
    reg 	       XB_FD_exception_illegal_instruction;
+   //reg 	       XB_FD_exception_ecall;
    reg 	       XB_FD_exception_instruction_misaligned;
    reg 	       XB_FD_exception_load_misaligned;
    reg 	       XB_FD_exception_store_misaligned;
@@ -105,16 +107,17 @@ module core
    // CSR Register file and Exception Handling Unit
    wire [31:0] XB_csr_out;
    wire        XB_csr_read, XB_csr_write, XB_csr_set, XB_csr_clear, XB_csr_imm;
-   wire [31:0] CSR_mepc;
+   wire [31:0] CSR_mepc, CSR_mtvec;
    reg 	       XB_csr_writeback;
 
    assign dm_be = FD_bubble ? 4'b0 : FD_dm_be;
-   assign dm_we = FD_bubble ? 1'b0 : FD_dm_we;
+   assign dm_we = (FD_exception_store_misaligned | FD_bubble) ?
+     1'b0 : FD_dm_we;
    assign dm_is_signed = FD_dm_is_signed;
 
    instruction_decoder inst_dec
      (
-      .inst(im_do),
+      .inst(im_do), .aluout_1_0(FD_aluout[1:0]),
       .immediate(FD_imm),
       .alu_is_signed(FD_alu_is_signed),
       .aluop1_sel(FD_aluop1_sel), .aluop2_sel(FD_aluop2_sel), 
@@ -130,6 +133,7 @@ module core
       .funct3(FD_funct3), .funct7(FD_funct7),
       .exception_unsupported_category(FD_exception_unsupported_category),
       .exception_illegal_instruction(FD_exception_illegal_instruction),
+      //.exception_ecall(FD_exception_ecall),
       .exception_load_misaligned(FD_exception_load_misaligned),
       .exception_store_misaligned(FD_exception_store_misaligned),
       .disasm_opcode(FD_disasm_opcode)
@@ -163,12 +167,11 @@ module core
       //
       // Illegal Instruction Exception, Misaligned Exception, MRET,
       // Branch, Jump, Jump Register, Increment
-      nextPC = (FD_initiate_illinst) ? `VEC_ILLEGAL_INST
-	       : (FD_initiate_misaligned) ? `VEC_MISALIGNED
-	       : (FD_pc_update & FD_pc_mepc) ? CSR_mepc + 32'h4
+      nextPC = (FD_initiate_exception) ? CSR_mtvec
+	       : (FD_pc_update & FD_pc_mepc) ? CSR_mepc
 	       : (do_branch) ? FD_imm + FD_PC
 	       : (FD_jump) ? FD_PC + FD_imm
-	       : (FD_jr) ? FD_aluout
+	       : (FD_jr) ? {FD_aluout[31:1], 1'b0}
 	       : FD_PC + 32'd4;
       FD_exception_instruction_misaligned = nextPC[1:0] != 2'b00;
       
@@ -260,15 +263,17 @@ module core
       .read(XB_csr_read), .write(XB_csr_write),
       .set(XB_csr_set), .clear(XB_csr_clear),
       .imm(XB_csr_imm), .a_rd(FD_a_rd),
-      .initiate_illinst(FD_initiate_illinst),
-      .initiate_misaligned(FD_initiate_misaligned),
+      .initiate_exception(FD_initiate_exception),
       .XB_FD_exception_unsupported_category(XB_FD_exception_unsupported_category),
       .XB_FD_exception_illegal_instruction(XB_FD_exception_illegal_instruction),
       .XB_FD_exception_instruction_misaligned(XB_FD_exception_instruction_misaligned),
+      //.XB_FD_exception_ecall(FD_exception_ecall),
       .XB_FD_exception_load_misaligned(XB_FD_exception_load_misaligned),
       .XB_FD_exception_store_misaligned(XB_FD_exception_store_misaligned),
-      .src_dst(FD_imm[11:0]), .d_rs1(FD_d_rs1), .uimm(FD_a_rs1),
-      .FD_pc(FD_PC), .XB_pc(XB_PC), .data_out(XB_csr_out), .csr_mepc(CSR_mepc)
+      .src_dst(FD_imm[11:0]),
+      .d_rs1(FD_d_rs1), .uimm(FD_a_rs1), .FD_aluout(FD_aluout),
+      .nextPC(nextPC), .XB_pc(XB_PC), .data_out(XB_csr_out), 
+      .csr_mepc(CSR_mepc), .csr_mtvec(CSR_mtvec)
       );
 
    // Writeback path select
@@ -285,7 +290,7 @@ module core
    assign dm_di = FD_d_rs2;
 
    // Flush instructions on exception
-   assign FD_bubble = FD_initiate_illinst | FD_initiate_misaligned;
+   assign FD_bubble = FD_initiate_exception;
    // The main pipeline
    always @ (posedge clk, negedge resetb) begin : CORE_PIPELINE
       if (!resetb) begin
@@ -294,6 +299,7 @@ module core
 	 XB_csr_writeback <= 1'b0;
 	 XB_FD_exception_unsupported_category <= 1'b0;
 	 XB_FD_exception_illegal_instruction <= 1'b0;
+	 //XB_FD_exception_ecall <= 1'b0;
 	 XB_FD_exception_instruction_misaligned <= 1'b0;
 	 XB_FD_exception_load_misaligned <= 1'b0;
 	 XB_FD_exception_store_misaligned <= 1'b0;
@@ -343,6 +349,7 @@ module core
 	      <= FD_exception_unsupported_category;
 	    XB_FD_exception_illegal_instruction
 	      <= FD_exception_illegal_instruction;
+	    //XB_FD_exception_ecall <= FD_exception_ecall;
 	    XB_FD_exception_instruction_misaligned
 	      <= FD_exception_instruction_misaligned;
 	    XB_FD_exception_load_misaligned

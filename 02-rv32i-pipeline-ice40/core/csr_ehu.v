@@ -15,15 +15,18 @@ module csr_ehu
    clk, resetb, XB_bubble,
    // Control
    read, write, set, clear, imm, a_rd,
-   initiate_illinst, initiate_misaligned,
+   initiate_exception,
    // Exception In
    XB_FD_exception_unsupported_category,
    XB_FD_exception_illegal_instruction,
+   //XB_FD_exception_ecall,
    XB_FD_exception_instruction_misaligned,
    XB_FD_exception_load_misaligned,
    XB_FD_exception_store_misaligned,
    // Data
-   src_dst, d_rs1, uimm, FD_pc, XB_pc, data_out, csr_mepc
+   src_dst, d_rs1, uimm, FD_aluout, 
+   nextPC, XB_pc, 
+   data_out, csr_mepc, csr_mtvec
    );
 `include "core/csrlist.vh"
    input wire clk, resetb, XB_bubble;
@@ -32,41 +35,46 @@ module csr_ehu
    input wire read, write, set, clear, imm;
    input wire [4:0] a_rd;
    input wire [11:0] src_dst;
-   input wire [31:0] FD_pc, XB_pc, d_rs1;
+   input wire [31:0] XB_pc, d_rs1, FD_aluout, nextPC;
    input wire [4:0]  uimm;
    input wire	     XB_FD_exception_unsupported_category;
    input wire	     XB_FD_exception_illegal_instruction;
+   //input wire	     XB_FD_exception_ecall;
    input wire	     XB_FD_exception_instruction_misaligned;
    input wire	     XB_FD_exception_load_misaligned;
    input wire	     XB_FD_exception_store_misaligned;
    output reg [31:0] data_out;
-   output reg 	     initiate_illinst, initiate_misaligned;
+   output reg 	     initiate_exception;
    output wire [31:0] csr_mepc;
+   output wire [31:0] csr_mtvec;
    reg 		      XB_exception_illegal_instruction;
    reg [31:0] 	      mepc;
    reg [31:0] 	      mscratch, mcause, mtval;
+   reg [31:2]         mtvec;
+   reg mpie, mie;
    reg [63:0] 	      mcycle, minstret;
 
-   /* verilator lint_off UNUSED */
-   wire 	      initiate_exception;
-   /* verilator lint_on UNUSED */
    wire 	      FD_exception, XB_exception;
    // There exists an exception from FD stage
    assign FD_exception = XB_FD_exception_unsupported_category |
    		         XB_FD_exception_illegal_instruction |
+   		         //XB_FD_exception_ecall |
    		         XB_FD_exception_instruction_misaligned |
    		         XB_FD_exception_load_misaligned |
    		         XB_FD_exception_store_misaligned;
    // There exists an exception from XB stage
    assign XB_exception = XB_exception_illegal_instruction;
-   // There exists an exception
-   assign initiate_exception = XB_exception | FD_exception;
    // Output for PC update
    assign csr_mepc = mepc;
+   // Output for Machine Trap Vector Base Addr
+   assign csr_mtvec = {mtvec[31:2], 2'b0};
 
    // Exception Handling Unit. XB exceptions have higher priority
    // since XB instruction is senior. XB must not be a bubble
+   reg initiate_illinst, initiate_misaligned; //, initiate_ecall;
    always @ (*) begin : EXCEPTION_HANDLING_UNIT
+//      initiate_ecall
+//	= ~XB_bubble & XB_FD_exception_ecall;
       initiate_illinst
 	= ~XB_bubble & (XB_exception_illegal_instruction |
       			XB_FD_exception_illegal_instruction |
@@ -75,6 +83,9 @@ module csr_ehu
 	= ~XB_bubble & (XB_FD_exception_instruction_misaligned |
       			XB_FD_exception_load_misaligned |
       			XB_FD_exception_store_misaligned);
+
+      //initiate_exception = initiate_ecall | initiate_illinst | initiate_misaligned;
+      initiate_exception = initiate_illinst | initiate_misaligned;
    end
 
    // The operand to operate on target CSR
@@ -85,9 +96,11 @@ module csr_ehu
    // If rd/uimm field is 0, then do not perform operation to prevent
    // side effect
    assign really_read = read && (a_rd != 5'b0);
-   assign really_write = write && !(imm && uimm == 5'b0);
+   assign really_write = write;
    assign really_set = set && (uimm != 5'b0);
    assign really_clear = clear && (uimm != 5'b0);
+
+   reg [31:0] badaddr_p, nextPC_p;
 
    always @ (posedge clk, negedge resetb) begin : CSR_PIPELINE
       if (!resetb) begin
@@ -95,15 +108,26 @@ module csr_ehu
 	 minstret <= 64'b0;
 	 mepc <= 32'bX;
 	 data_out <= 32'bX;
+         mtvec[31:2] <= 30'h1; // or, 0x4
+         // No interrupt on reset
+         mpie <= 1'b0;
+         mie <= 1'b0;
+         badaddr_p <= 32'bX;
+         nextPC_p <= 32'bX;
       end
       else if (clk) begin
 	 /* verilator lint_off BLKSEQ */
 	 XB_exception_illegal_instruction = 1'b0;
 	 mcycle <= mcycle + 64'b1;
+         // On trap, mpie is updated
+         if (initiate_exception) mpie <= mie;
 	 if (!XB_bubble) begin
 	    // Instruction is committed when it is not a bubble
 	    minstret <= minstret + 64'b1;
 	 end
+         // Badaddr is the address output from the FD ALU
+         badaddr_p <= FD_aluout;
+         nextPC_p <= nextPC;
 	 // CSR register file
 	 case (src_dst)
 	   `CSR_MVENDORID: begin
@@ -118,13 +142,32 @@ module csr_ehu
 	   `CSR_MHARTID: begin
 	      if (really_read) data_out <= 32'b0;
 	   end
+           `CSR_MSTATUS: begin
+             if (really_read) 
+               data_out <= {19'b0,2'b11,3'b0,mpie,3'b0,mie,3'b0};
+             if (really_write) begin
+               mpie <= operand[7];
+               mie <= operand[3];
+             end
+             if (really_set) begin
+               mpie <= operand[7] ? 1 : mpie;
+               mie <= operand[3] ? 1 : mie;
+             end
+             if (really_clear) begin
+               mpie <= operand[7] ? 0 : mpie;
+               mie <= operand[3] ? 0 : mie;
+             end
+           end
 	   `CSR_MISA: begin
 	      // 32-bit, I subset. Read RISC-V Spec Vol 2
 	      if (really_read) data_out <= 32'b0100_0000_0000_0000_0000_0001_0000_0000;
 	   end
 	   `CSR_MTVEC: begin
 	      // Direct
-	      if (really_read) data_out <= 32'b0;
+	      if (really_read) data_out <= {mtvec[31:2], 2'b0};
+              if (really_write) mtvec[31:2] <= operand[31:2];
+              if (really_set) mtvec[31:2] <= mtvec[31:2] | operand[31:2];
+              if (really_clear) mtvec[31:2] <= mtvec[31:2] & ~operand[31:2];
 	   end
 	   `CSR_MSCRATCH: begin
 	      if (really_read) data_out <= mscratch;
@@ -198,24 +241,32 @@ module csr_ehu
 	    // internal pipeline of the CSR. CSR has one stage
 	    // pipeline, so even though the exception is supposed to
 	    // happen in XB stage, a CSR exception's PC is in FD stage
-	    mepc <= FD_pc;
+	    mepc <= XB_pc;
 	    mcause <= 32'd2; // Illegal Instruction
+            mtval <= 32'b0;
 	 end
 	 else if (FD_exception) begin
 	    mepc <= XB_pc;
 	    if (XB_FD_exception_instruction_misaligned) begin
 	       mcause <= 32'd0;
+               mtval <= nextPC_p;
 	    end
 	    else if (XB_FD_exception_illegal_instruction |
 		     XB_FD_exception_unsupported_category) begin
 	       mcause <= 32'd2;
+               mtval <= 32'b0;
 	    end
 	    else if (XB_FD_exception_load_misaligned) begin
 	       mcause <= 32'd4;
+               mtval <= badaddr_p;
 	    end
 	    else if (XB_FD_exception_store_misaligned) begin
 	       mcause <= 32'd6;
+               mtval <= badaddr_p;
 	    end
+            //else if (XB_FD_exception_ecall) begin
+            //  mcause <= 32'd11;
+            //end
 	 end // if (FD_exception)
 	 /* verilator lint_on BLKSEQ */
       end // if (clk)

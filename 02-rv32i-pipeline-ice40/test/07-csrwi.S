@@ -27,6 +27,15 @@ test_csrwi:
 	csrr x1, mcause
 	li x2, 0xC
 	bne x1, x2, test_failed
+
+        # mtvec. Ignores lower two bits
+        csrwi mtvec, 0x1
+        csrr x1, mtvec
+        bnez x1, test_failed
+        csrwi mtvec, 0x8
+        csrr x1, mtvec
+        li x2, 8
+        bne x1, x2, test_failed
 	
 	# mtval. May be called mbadaddr
 	csrwi mbadaddr, 0x1
@@ -39,6 +48,9 @@ test_csrwi:
 	li x2, 0xF
 	csrr x1, mcycle
 	bne x1, x2, test_failed
+	csrwi mcycle, 0
+        csrr x1, mcycle
+        bnez x1, test_failed
 
 	# minstret
 	csrwi minstret, 0x1
@@ -57,5 +69,15 @@ test_csrwi:
 	li x2, 0x4
 	csrr x1, minstreth
 	bne x1, x2, test_failed
+
+        # mstatus
+        csrwi mstatus, 0x1 # ignored
+        csrr x1, mstatus
+        li x2, 0b00000000000000000001100000000000
+        bne x2, x1, test_failed
+        csrwi mstatus, 0x8 # mie
+        li x2, 0b00000000000000000001100000001000
+        csrr x1, mstatus
+        bne x1, x2, test_failed
 
 	j main

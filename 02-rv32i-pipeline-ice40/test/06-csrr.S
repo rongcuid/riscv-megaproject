@@ -47,14 +47,20 @@ test_csrrs:
 	csrr x1, mhartid
 	bnez x1, test_failed
 
+        # mstatus = 32b00000000000000000001100000000000;
+        csrr x1, mstatus
+        li x3, 0b00000000000000000001100000000000
+        bne x1, x3, test_failed
+
 	# misa = 0x40000100
 	li x2, 0x40000100
 	csrr x1, misa
 	bne x1, x2, test_failed
 
-	# mtvec = 0
+	# mtvec = 4
+        li x2, 4
 	csrr x1, mtvec
-	bnez x1, test_failed
+	bne x1, x2, test_failed
 
 	# minstret, test2
 	csrr x1, minstret

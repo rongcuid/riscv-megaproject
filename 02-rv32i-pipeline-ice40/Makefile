@@ -1,7 +1,75 @@
-AS=riscv32-unknown-elf-as
-OBJCOPY=riscv32-unknown-elf-objcopy
-all: compile_core_tb
+RISCV_PREFIX ?= riscv32-unknown-elf-
+CC=$(RISCV_PREFIX)gcc
+AS=$(RISCV_PREFIX)as
+OBJCOPY=$(RISCV_PREFIX)objcopy
+all: run_compliance_quick
 #	echo "(MM) Compiling and running all tests"
+
+run_compliance: compile_cpu_run
+	cd riscv-compliance && make
+
+#COMPLIANCE_TEST=I-ENDIANESS-01
+#COMPLIANCE_TEST=I-ADD-01
+#COMPLIANCE_TEST=I-ADDI-01
+#COMPLIANCE_TEST=I-ANDI-01
+#COMPLIANCE_TEST=I-AUIPC-01
+#COMPLIANCE_TEST=I-BEQ-01
+#COMPLIANCE_TEST=I-BGE-01
+#COMPLIANCE_TEST=I-BGEU-01
+#COMPLIANCE_TEST=I-BLT-01
+#COMPLIANCE_TEST=I-BLTU-01
+#COMPLIANCE_TEST=I-BNE-01
+#COMPLIANCE_TEST=I-CSRRC-01
+#COMPLIANCE_TEST=I-CSRRCI-01
+#COMPLIANCE_TEST=I-CSRRS-01
+#COMPLIANCE_TEST=I-CSRRSI-01
+#COMPLIANCE_TEST=I-CSRRW-01
+#COMPLIANCE_TEST=I-CSRRWI-01
+#COMPLIANCE_TEST=I-DELAY_SLOTS-01
+#COMPLIANCE_TEST=I-EBREAK-01# Fails
+#COMPLIANCE_TEST=I-ECALL-01# Fails
+#COMPLIANCE_TEST=I-FENCE.I-01# Fails
+#COMPLIANCE_TEST=I-IO
+#COMPLIANCE_TEST=I-JAL-01
+#COMPLIANCE_TEST=I-JALR-01
+#COMPLIANCE_TEST=I-LB-01
+#COMPLIANCE_TEST=I-LBU-01
+#COMPLIANCE_TEST=I-LH-01
+#COMPLIANCE_TEST=I-LHU-01
+#COMPLIANCE_TEST=I-LW-01
+#COMPLIANCE_TEST=I-MISALIGN_JMP-01
+COMPLIANCE_TEST=I-MISALIGN_LDST-01
+#COMPLIANCE_TEST=I-NOP-01
+#COMPLIANCE_TEST=I-OR-01
+#COMPLIANCE_TEST=I-ORI-01
+#COMPLIANCE_TEST=I-RF_size-01
+#COMPLIANCE_TEST=I-RF_width-01
+#COMPLIANCE_TEST=I-RF_x0-01
+#COMPLIANCE_TEST=I-SB-01
+#COMPLIANCE_TEST=I-SH-01
+#COMPLIANCE_TEST=I-SLL-01
+#COMPLIANCE_TEST=I-SLLI-01
+#COMPLIANCE_TEST=I-SLT-01
+#COMPLIANCE_TEST=I-SLTI-01
+#COMPLIANCE_TEST=I-SLTIU-01
+#COMPLIANCE_TEST=I-SLTU-01
+#COMPLIANCE_TEST=I-SRA-01
+#COMPLIANCE_TEST=I-SRAI-01
+#COMPLIANCE_TEST=I-SRL-01
+#COMPLIANCE_TEST=I-SRLI-01
+#COMPLIANCE_TEST=I-SUB-01
+#COMPLIANCE_TEST=I-SW-01
+#COMPLIANCE_TEST=I-XOR-01
+#COMPLIANCE_TEST=I-XORI-01
+
+run_compliance_quick: compile_cpu_run compile_compliance_quick
+	./tb_out/cpu_run tb_out/$(COMPLIANCE_TEST).elf | tee tb_out/run.out 
+	grep '(DD)' tb_out/run.out | cut -d' ' -f 2 > tb_out/result.log
+	diff tb_out/result.log riscv-compliance/riscv-test-suite/rv32i/references/$(COMPLIANCE_TEST).reference_output
+
+compile_compliance_quick:
+	$(CC) -march=rv32i -mabi=ilp32 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Iriscv-compliance/riscv-test-env/ -Iriscv-compliance/riscv-test-env/msc/ -Iriscv-compliance/riscv-target/msc-02/ -Triscv-compliance/riscv-test-env/msc/link.ld riscv-compliance/riscv-test-suite/rv32i/src/$(COMPLIANCE_TEST).S -o tb_out/$(COMPLIANCE_TEST).elf
+	$(OBJCOPY) -O binary tb_out/$(COMPLIANCE_TEST).elf tb_out/$(COMPLIANCE_TEST).elf.bin
 
 compile_regfile_tb: regfile.v regfile_sc.cpp
 #	echo "(MM) Compiling Regfile testbench"
@@ -20,7 +88,7 @@ run_mmu_tb: compile_mmu_tb
 	./tb_out/mmu_tb
 
 tb_out/%.bin: test/%.S
-	$(AS) $^ -o $(@:.bin=.elf)
+	$(AS) -march=rv32i $^ -o $(@:.bin=.elf)
 	$(OBJCOPY) -O binary $(@:.bin=.elf) $@
 #	riscv32-unknown-elf-as $^ -o $(@:.bin=.elf)
 #	riscv32-unknown-elf-objcopy -O binary $(@:.bin=.elf) $@
@@ -48,6 +116,10 @@ compile_core_tb: core_top.v core_top_sc.cpp BRAM_SSP.v mmu.v regfile.v core/csr_
 	verilator -Wall --sc $^ --exe -o ../tb_out/cpu_top_tb
 	make -C obj_dir -f Vcore_top.mk
 
+compile_cpu_run: cpu_run_sc.cpp core_top.v BRAM_SSP.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v 
+	echo "(MM) Compiling CPU Simulator"
+	verilator -Wall --sc $^ --exe -o ../tb_out/cpu_run
+	make -C obj_dir -f Vcore_top.mk
 
 run_core_tb: compile_core_tb $(TEST_PROGRAMS)
 	./tb_out/cpu_top_tb
