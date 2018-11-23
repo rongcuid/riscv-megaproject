@@ -16,6 +16,9 @@ Communication between simulator and program is done through IO port 0x80000000
 [X] Writable mstatus register
 
 ## Prepare for Zephyr
-[ ] Port to Zephyr toolchain
-[ ] Port Zephyr OS
+[X] Port to Zephyr toolchain
+[X] Port Zephyr OS
+[ ] Implement ECALL
+[ ] Implement mtime and mtimecmp
+[ ] Implement system timer interrupt
 
