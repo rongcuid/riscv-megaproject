@@ -81,7 +81,7 @@ compile_regfile_tb: regfile.v regfile_sc.cpp
 run_regfile_tb: compile_regfile_tb
 	./tb_out/regfile_tb
 
-compile_mmu_tb: mmu.v mmu_sc.cpp BRAM_SSP.v 
+compile_mmu_tb: mmu.v mmu_sc.cpp SB_SPRAM256KA.v 
 	echo "(MM) Compiling MMU testbench"
 	verilator -Wall --sc $^ --exe -o ../tb_out/mmu_tb
 	make -C obj_dir -f Vmmu.mk
@@ -113,12 +113,12 @@ TEST_PROGRAMS+=tb_out/13-csr.bin
 TEST_PROGRAMS+=tb_out/14-mem.bin
 TEST_PROGRAMS+=tb_out/15-exception.bin
 
-compile_core_tb: core_top.v core_top_sc.cpp BRAM_SSP.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v 
+compile_core_tb: core_top.v core_top_sc.cpp SB_SPRAM256KA.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v 
 	echo "(MM) Compiling CPU Top testbench"
 	verilator -Wall --sc $^ --exe -o ../tb_out/cpu_top_tb
 	make -C obj_dir -f Vcore_top.mk
 
-compile_cpu_run: cpu_run_sc.cpp core_top.v BRAM_SSP.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v timer.v
+compile_cpu_run: cpu_run_sc.cpp core_top.v SB_SPRAM256KA.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v timer.v
 	echo "(MM) Compiling CPU Simulator"
 	verilator -Wall --sc $^ --top-module core_top --exe -o ../tb_out/cpu_run
 	make -C obj_dir -f Vcore_top.mk
