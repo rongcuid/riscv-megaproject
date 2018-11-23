@@ -110,11 +110,6 @@ public:
     dut->mtime_dout(mtime_dout_tb);
   }
 
-  ~cpu_run_t()
-  {
-    delete dut;
-  }
-
   void reset()
   {
     resetb_tb.write(false);
