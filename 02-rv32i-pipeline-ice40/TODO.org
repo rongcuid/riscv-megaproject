@@ -1,0 +1,28 @@
+* Integrating with RV32I Compliance Test
+
+** Test halting
+
+Communication between simulator and program is done through IO port 0x80000000
+
+- 0 -- Initiate memory scan
+- 1 -- Test pass
+- 2 -- Test fail
+- 3 -- Test halt
+
+** Architecture modifications
+
+- [X] Reset handler only
+- [X] Exception handler must be modifiable via mtvec
+- [X] Writable mstatus register
+
+** Prepare for Zephyr
+- [X] Port to Zephyr toolchain
+- [X] Port Zephyr OS
+- [X] Implement ECALL and EBREAK
+- [X] Implement mtime and mtimecmp
+- [X] Implement system timer interrupt
+- [X] For now, increase size of ROM to 15kB
+- [X] Use 16kx16 SPRAM as main memory
+- [ ] Reduce ROM size to 12kB
+- [ ] Make ROM synthesizable
+
