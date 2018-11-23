@@ -94,7 +94,7 @@ module csr_ehu
    // If rd/uimm field is 0, then do not perform operation to prevent
    // side effect
    assign really_read = read && (a_rd != 5'b0);
-   assign really_write = write && !(imm && uimm == 5'b0);
+   assign really_write = write;
    assign really_set = set && (uimm != 5'b0);
    assign really_clear = clear && (uimm != 5'b0);
 
