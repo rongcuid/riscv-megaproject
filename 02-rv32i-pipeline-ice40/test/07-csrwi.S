@@ -50,7 +50,7 @@ test_csrwi:
 	bne x1, x2, test_failed
 	csrwi mcycle, 0
         csrr x1, mcycle
-        beqz x1, test_failed
+        bnez x1, test_failed
 
 	# minstret
 	csrwi minstret, 0x1

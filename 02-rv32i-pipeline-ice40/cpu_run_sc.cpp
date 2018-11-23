@@ -106,7 +106,6 @@ public:
 
   ~cpu_run_t()
   {
-    delete instruction_rom;
     delete dut;
   }
 
