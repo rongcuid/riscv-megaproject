@@ -19,7 +19,7 @@ module csr_ehu
    // Exception In
    XB_FD_exception_unsupported_category,
    XB_FD_exception_illegal_instruction,
-   //XB_FD_exception_ecall,
+   XB_FD_exception_ecall,
    XB_FD_exception_instruction_misaligned,
    XB_FD_exception_load_misaligned,
    XB_FD_exception_store_misaligned,
@@ -39,7 +39,7 @@ module csr_ehu
    input wire [4:0]  uimm;
    input wire	     XB_FD_exception_unsupported_category;
    input wire	     XB_FD_exception_illegal_instruction;
-   //input wire	     XB_FD_exception_ecall;
+   input wire	     XB_FD_exception_ecall;
    input wire	     XB_FD_exception_instruction_misaligned;
    input wire	     XB_FD_exception_load_misaligned;
    input wire	     XB_FD_exception_store_misaligned;
@@ -253,7 +253,7 @@ module csr_ehu
 	    end
 	    else if (XB_FD_exception_illegal_instruction |
 		     XB_FD_exception_unsupported_category) begin
-	       mcause <= 32'd2;
+	       mcause <= (XB_FD_exception_ecall) ? 32'd11 : 32'd2;
                mtval <= 32'b0;
 	    end
 	    else if (XB_FD_exception_load_misaligned) begin
