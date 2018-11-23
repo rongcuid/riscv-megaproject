@@ -372,21 +372,11 @@ module instruction_decoder
 		exception_store_misaligned = aluout_1_0[0] ? 1'b1 : 1'b0;
 		dm_be = aluout_1_0[0] ? 4'b0
 			: aluout_1_0[1] ? 4'b1100 : 4'b0011;
-		// if (aluout_1_0[0])
-		//   exception_store_misaligned = 1'b1;
-		// else begin
-		//    if (aluout_1_0[1])
-		//      dm_be = 4'b1100;
-		//    else
-		//      dm_be = 4'b0011;
-		// end
 	     end
 	     3'b010: begin : SW
 		dm_be = 4'b1111;
 		exception_store_misaligned
 		  = (aluout_1_0[0] | aluout_1_0[1]) ? 1'b1 : 1'b0;
-		// if (aluout_1_0[0] | aluout_1_0[1])
-		//   exception_store_misaligned = 1'b1;
 	     end
 	     default: begin 
 		exception_illegal_instruction = 1'b1;
