@@ -35,6 +35,10 @@ public:
   sc_signal<uint32_t> io_data_read_tb;
   sc_signal<uint32_t> io_data_write_tb;
 
+  sc_signal<bool> mtime_we_tb;
+  sc_signal<uint32_t> mtime_dout_tb;
+  sc_signal<bool> irq_mtimecmp_tb;
+
   sc_signal<sc_bv<256> > FD_disasm_opcode;
   char disasm[32];
 
@@ -58,6 +62,9 @@ public:
     , io_addr_tb("io_addr_tb")
     , io_en_tb("io_en_tb")
     , io_we_tb("io_we_tb")
+    , mtime_we_tb("mtime_we_tb")
+    , mtime_dout_tb("mtime_dout_tb")
+    , irq_mtimecmp_tb("irq_mtimecmp_tb")
     , io_data_read_tb("io_data_read_tb")
     , io_data_write_tb("io_data_write_tb")
     , FD_disasm_opcode("FD_disasm_opcode")
@@ -71,11 +78,9 @@ public:
       io_memory_tb[i] = sc_signal<uint32_t>(ss.str().c_str());
       sensitive << io_memory_tb[i];
     }
-
-    SC_THREAD(tb_handshake);
     sensitive << io_en_tb;
     sensitive << io_we_tb;
-    sensitive << io_addr_tb;
+    sensitive << io_data_read_tb;
     sensitive << io_data_write_tb;
 
     SC_CTHREAD(test_thread, clk_tb.pos());
@@ -102,6 +107,10 @@ public:
     dut->io_data_write(io_data_write_tb);
     dut->FD_disasm_opcode(FD_disasm_opcode);
     dut->FD_PC(FD_PC);
+
+    dut->mtime_we(mtime_we_tb);
+    dut->mtime_dout(mtime_dout_tb);
+    dut->irq_mtimecmp(irq_mtimecmp_tb);
   }
 
   ~cpu_run_t()
@@ -170,7 +179,7 @@ public:
   }
 
   void io_thread(void);
-  void tb_handshake(void);
+  //void tb_handshake(void);
   
   bool load_program(const std::string& path)
   {
@@ -185,45 +194,63 @@ public:
 void cpu_run_t::io_thread()
 {
   while(true) {
+    bool en = io_en_tb.read();
+    bool we = io_we_tb.read();
     uint32_t addrw32 = io_addr_tb.read();
     uint32_t addrw6 = (addrw32 >> 2) % 64;
     io_data_read_tb.write(io_memory_tb[addrw6].read());
-    wait();
-  }
-}
 
-// Handshake happens when 0x80000000 writes non-zero
-void cpu_run_t::tb_handshake()
-{
-  while (true) {
-    test_passes = false;
-    test_fails = false;
-    test_halt = false;
-    if (io_en_tb.read() && io_we_tb.read()) {
-      // IO domain address is 0x0
-      if (io_addr_tb.read() == 0) {
-        switch (io_data_write_tb.read()) {
-          case 0:
-            scan_memory_for_base_address();
-            break;
-          case 1:
-            test_passes = true;
-            break;
-          case 2:
-            test_fails = true;
-            break;
-          case 3:
-            test_halt = true;
-            break;
-          default:
-            assert(false && "Invalid testbench command");
-            break;
+    {
+      // Testbench command
+      test_passes = false;
+      test_fails = false;
+      test_halt = false;
+      if (en && we) {
+        // IO domain address is 0x0
+        if (addrw32 == 0) {
+          switch (io_data_write_tb.read()) {
+            case 0:
+              scan_memory_for_base_address();
+              break;
+            case 1:
+              test_passes = true;
+              break;
+            case 2:
+              test_fails = true;
+              break;
+            case 3:
+              test_halt = true;
+              break;
+            default:
+              assert(false && "Invalid testbench command");
+              break;
+          }
+        }
+      }
+    }
+
+    {
+      // Timer connection
+      bool timer_op = addrw32 >= 0x10 && addrw32 < 0x20;
+      mtime_we_tb.write(false);
+      if (timer_op) {
+        mtime_we_tb.write(we);
+        if (en) {
+          io_data_read_tb.write(mtime_dout_tb.read());
         }
       }
     }
     wait();
   }
 }
+
+// Handshake happens when 0x80000000 writes non-zero
+//void cpu_run_t::tb_handshake()
+//{
+//  while (true) {
+//    wait();
+//  }
+//}
 
 std::string bv_to_opcode(const sc_bv<256>& bv)
 {
