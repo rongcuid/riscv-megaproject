@@ -64,6 +64,7 @@ module core
    wire 	     FD_exception_unsupported_category;
    wire 	     FD_exception_illegal_instruction;
    wire 	     FD_exception_ecall;
+   wire 	     FD_exception_ebreak;
    reg 		     FD_exception_instruction_misaligned;
    wire 	     FD_exception_load_misaligned;
    wire 	     FD_exception_store_misaligned;
@@ -94,6 +95,7 @@ module core
    reg 	       XB_FD_exception_unsupported_category;
    reg 	       XB_FD_exception_illegal_instruction;
    reg 	       XB_FD_exception_ecall;
+   reg 	       XB_FD_exception_ebreak;
    reg 	       XB_FD_exception_instruction_misaligned;
    reg 	       XB_FD_exception_load_misaligned;
    reg 	       XB_FD_exception_store_misaligned;
@@ -134,6 +136,7 @@ module core
       .exception_unsupported_category(FD_exception_unsupported_category),
       .exception_illegal_instruction(FD_exception_illegal_instruction),
       .exception_ecall(FD_exception_ecall),
+      .exception_ebreak(FD_exception_ebreak),
       .exception_load_misaligned(FD_exception_load_misaligned),
       .exception_store_misaligned(FD_exception_store_misaligned),
       .disasm_opcode(FD_disasm_opcode)
@@ -268,6 +271,7 @@ module core
       .XB_FD_exception_illegal_instruction(XB_FD_exception_illegal_instruction),
       .XB_FD_exception_instruction_misaligned(XB_FD_exception_instruction_misaligned),
       .XB_FD_exception_ecall(XB_FD_exception_ecall),
+      .XB_FD_exception_ebreak(XB_FD_exception_ebreak),
       .XB_FD_exception_load_misaligned(XB_FD_exception_load_misaligned),
       .XB_FD_exception_store_misaligned(XB_FD_exception_store_misaligned),
       .src_dst(FD_imm[11:0]),
@@ -300,6 +304,7 @@ module core
 	 XB_FD_exception_unsupported_category <= 1'b0;
 	 XB_FD_exception_illegal_instruction <= 1'b0;
 	 XB_FD_exception_ecall <= 1'b0;
+	 XB_FD_exception_ebreak <= 1'b0;
 	 XB_FD_exception_instruction_misaligned <= 1'b0;
 	 XB_FD_exception_load_misaligned <= 1'b0;
 	 XB_FD_exception_store_misaligned <= 1'b0;
@@ -350,6 +355,7 @@ module core
 	    XB_FD_exception_illegal_instruction
 	      <= FD_exception_illegal_instruction;
 	    XB_FD_exception_ecall <= FD_exception_ecall;
+	    XB_FD_exception_ebreak <= FD_exception_ebreak;
 	    XB_FD_exception_instruction_misaligned
 	      <= FD_exception_instruction_misaligned;
 	    XB_FD_exception_load_misaligned

@@ -24,6 +24,7 @@ module instruction_decoder
    exception_load_misaligned,
    exception_store_misaligned,
    exception_ecall,
+   exception_ebreak,
    // Debugging
    disasm_opcode
    );
@@ -146,7 +147,7 @@ module instruction_decoder
    reg 	      exception_illegal_instruction;
    reg 	      exception_load_misaligned;
    reg 	      exception_store_misaligned;
-   output reg        exception_ecall;
+   output reg        exception_ecall, exception_ebreak;
    integer    aluop1_sel, aluop2_sel, alu_op;
    // Register fields
    assign a_rs1 = (opcode[6:2] == `LUI) ? 5'd0 : inst[19:15];
@@ -183,6 +184,7 @@ module instruction_decoder
       exception_load_misaligned = 1'b0;
       exception_store_misaligned = 1'b0;
       exception_ecall = 1'b0;
+      exception_ebreak = 1'b0;
       // Decoding opcode. Read the RISC-V Spec Vol 1.
       case (opcode[6:2])
 	`OP_IMM: begin
@@ -394,7 +396,8 @@ module instruction_decoder
 		case (funct7)
 		  7'b0: begin : ECALL_EBREAK_URET
 		     // Software trap
-		     exception_ecall = 1'b1;
+		     exception_ecall = ~immediate[0];
+		     exception_ebreak = immediate[0];
 		  end
 		  7'b0001000: begin : SRET_WFI
 		     // Software trap
