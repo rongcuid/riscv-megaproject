@@ -19,6 +19,8 @@ Communication between simulator and program is done through IO port 0x80000000
 [X] Port to Zephyr toolchain
 [X] Port Zephyr OS
 [X] Implement ECALL and EBREAK
-[ ] Implement mtime and mtimecmp
-[ ] Implement system timer interrupt
+[X] Implement mtime and mtimecmp
+[X] Implement system timer interrupt
+[ ] For now, increase size of ROM to 15kB
+[ ] Use 16kx16 SPRAM as main memory
 
