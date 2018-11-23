@@ -170,7 +170,7 @@ module core
 	       : (FD_pc_update & FD_pc_mepc) ? CSR_mepc
 	       : (do_branch) ? FD_imm + FD_PC
 	       : (FD_jump) ? FD_PC + FD_imm
-	       : (FD_jr) ? FD_aluout
+	       : (FD_jr) ? {FD_aluout[31:1], 1'b0}
 	       : FD_PC + 32'd4;
       FD_exception_instruction_misaligned = nextPC[1:0] != 2'b00;
       
