@@ -4,13 +4,13 @@
 #include <fstream>
 #include <iomanip>
 
-#include "rom_1024x32_t.hpp"
+#include "rom_3840x32_t.hpp"
 #include "Vcore_top.h"
 #include "Vcore_top_core_top.h"
 #include "Vcore_top_core.h"
 #include "Vcore_top_regfile.h"
 #include "Vcore_top_mmu.h"
-#include "Vcore_top_BRAM_SSP__D40_DB6_W8.h"
+#include "Vcore_top_SB_SPRAM256KA.h"
 
 std::string bv_to_opcode(const sc_bv<256>& bv);
 
@@ -19,7 +19,7 @@ class cpu_run_t : public sc_module
 public:
   Vcore_top* dut;
 
-  rom_1024x32_t* instruction_rom;
+  rom_3840x32_t* instruction_rom;
 
   sc_in<bool> clk_tb;
   sc_signal<bool> resetb_tb;
@@ -85,7 +85,7 @@ public:
 
     test_result_base_addr = 0;
 
-    instruction_rom = new rom_1024x32_t("im_rom");
+    instruction_rom = new rom_3840x32_t("im_rom");
     instruction_rom->addr1(rom_addr_tb);
     instruction_rom->addr2(rom_addr_2_tb);
     instruction_rom->data1(rom_data_tb);
@@ -121,20 +121,24 @@ public:
   uint32_t get_memory_word(uint32_t i) 
   {
     uint32_t word = 0;
+    // word |= dut->core_top->MMU0->ram0->RAM[i];
+    // word |= dut->core_top->MMU0->ram1->RAM[i] << 8;
+    // word |= dut->core_top->MMU0->ram2->RAM[i] << 16;
+    // word |= dut->core_top->MMU0->ram3->RAM[i] << 24;
     word |= dut->core_top->MMU0->ram0->RAM[i];
-    word |= dut->core_top->MMU0->ram1->RAM[i] << 8;
-    word |= dut->core_top->MMU0->ram2->RAM[i] << 16;
-    word |= dut->core_top->MMU0->ram3->RAM[i] << 24;
+    word |= dut->core_top->MMU0->ram1->RAM[i] << 16;
     return word;
   }
 
   void initialize_memory() 
   {
     for (int i=0; i<1024; ++i) {
-    dut->core_top->MMU0->ram0->RAM[i] = 0xAA;
-    dut->core_top->MMU0->ram1->RAM[i] = 0xAA;
-    dut->core_top->MMU0->ram2->RAM[i] = 0xAA;
-    dut->core_top->MMU0->ram3->RAM[i] = 0xAA;
+    dut->core_top->MMU0->ram0->RAM[i] = 0xAAAA;
+    dut->core_top->MMU0->ram1->RAM[i] = 0xAAAA;
+    // dut->core_top->MMU0->ram0->RAM[i] = 0xAA;
+    // dut->core_top->MMU0->ram1->RAM[i] = 0xAA;
+    // dut->core_top->MMU0->ram2->RAM[i] = 0xAA;
+    // dut->core_top->MMU0->ram3->RAM[i] = 0xAA;
     }
   }
   void dump_memory();
