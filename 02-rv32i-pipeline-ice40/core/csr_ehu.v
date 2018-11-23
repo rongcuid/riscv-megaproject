@@ -24,7 +24,9 @@ module csr_ehu
    XB_FD_exception_load_misaligned,
    XB_FD_exception_store_misaligned,
    // Data
-   src_dst, d_rs1, uimm, XB_pc, data_out, csr_mepc, csr_mtvec
+   src_dst, d_rs1, uimm, FD_aluout, 
+   nextPC, XB_pc, 
+   data_out, csr_mepc, csr_mtvec
    );
 `include "core/csrlist.vh"
    input wire clk, resetb, XB_bubble;
@@ -33,7 +35,7 @@ module csr_ehu
    input wire read, write, set, clear, imm;
    input wire [4:0] a_rd;
    input wire [11:0] src_dst;
-   input wire [31:0] XB_pc, d_rs1;
+   input wire [31:0] XB_pc, d_rs1, FD_aluout, nextPC;
    input wire [4:0]  uimm;
    input wire	     XB_FD_exception_unsupported_category;
    input wire	     XB_FD_exception_illegal_instruction;
@@ -98,6 +100,8 @@ module csr_ehu
    assign really_set = set && (uimm != 5'b0);
    assign really_clear = clear && (uimm != 5'b0);
 
+   reg [31:0] badaddr_p, nextPC_p;
+
    always @ (posedge clk, negedge resetb) begin : CSR_PIPELINE
       if (!resetb) begin
 	 mcycle <= 64'b0;
@@ -108,6 +112,8 @@ module csr_ehu
          // No interrupt on reset
          mpie <= 1'b0;
          mie <= 1'b0;
+         badaddr_p <= 32'bX;
+         nextPC_p <= 32'bX;
       end
       else if (clk) begin
 	 /* verilator lint_off BLKSEQ */
@@ -119,6 +125,9 @@ module csr_ehu
 	    // Instruction is committed when it is not a bubble
 	    minstret <= minstret + 64'b1;
 	 end
+         // Badaddr is the address output from the FD ALU
+         badaddr_p <= FD_aluout;
+         nextPC_p <= nextPC;
 	 // CSR register file
 	 case (src_dst)
 	   `CSR_MVENDORID: begin
@@ -234,21 +243,26 @@ module csr_ehu
 	    // happen in XB stage, a CSR exception's PC is in FD stage
 	    mepc <= XB_pc;
 	    mcause <= 32'd2; // Illegal Instruction
+            mtval <= 32'b0;
 	 end
 	 else if (FD_exception) begin
 	    mepc <= XB_pc;
 	    if (XB_FD_exception_instruction_misaligned) begin
 	       mcause <= 32'd0;
+               mtval <= nextPC_p;
 	    end
 	    else if (XB_FD_exception_illegal_instruction |
 		     XB_FD_exception_unsupported_category) begin
 	       mcause <= 32'd2;
+               mtval <= 32'b0;
 	    end
 	    else if (XB_FD_exception_load_misaligned) begin
 	       mcause <= 32'd4;
+               mtval <= badaddr_p;
 	    end
 	    else if (XB_FD_exception_store_misaligned) begin
 	       mcause <= 32'd6;
+               mtval <= badaddr_p;
 	    end
             //else if (XB_FD_exception_ecall) begin
             //  mcause <= 32'd11;
