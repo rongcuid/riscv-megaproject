@@ -394,7 +394,6 @@ module instruction_decoder
 		case (funct7)
 		  7'b0: begin : ECALL_EBREAK_URET
 		     // Software trap
-		     exception_illegal_instruction = 1'b1;
 		     exception_ecall = 1'b1;
 		  end
 		  7'b0001000: begin : SRET_WFI
