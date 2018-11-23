@@ -127,5 +127,6 @@ run_core_tb: compile_core_tb $(TEST_PROGRAMS)
 	./tb_out/cpu_top_tb
 
 clean:
+	cd riscv-compliance && make clean && cd ..
 	rm -rf tmp tb_out/* obj_dir
 	find . -name "*~" -exec rm -f {} \;

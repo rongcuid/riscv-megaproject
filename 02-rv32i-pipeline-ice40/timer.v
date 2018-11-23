@@ -24,8 +24,8 @@ module timer(
     always @ (posedge clk, negedge resetb) begin : TIMER_PIPELINE
       if (!resetb) begin
         mtime <= 64'b0;
-        mtimecmp <= 64'hFFFFFFFFFFFFFFFF;
-        //mtimecmp <= 64'b0;
+        // mtimecmp <= 64'hFFFFFFFFFFFFFFFF;
+        mtimecmp <= 64'b0;
         irq_mtimecmp <= 1'b0;
       end
       else if (clk) begin
