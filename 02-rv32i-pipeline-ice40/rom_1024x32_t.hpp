@@ -38,17 +38,22 @@ class rom_1024x32_t : public sc_module
       clear_memory();
       ifstream f(path, std::ios::binary);
       if (f.is_open()) {
-        std::vector<unsigned char> buf
-          (std::istreambuf_iterator<char>(f), {});
-        size_t size = buf.size();
+	f.seekg(0, f.end);
+	int size = f.tellg();
+	f.seekg(0, f.beg);
+	auto buf = new char[size];
+	f.read(buf, size);
+        // std::vector<unsigned char> buf
+        //   (std::istreambuf_iterator<char>(f), {});
         if (size == 0) return false;
         if (size % 4 != 0) return false;
 
-        auto words = (uint32_t*) buf.data();
+        auto words = (uint32_t*) buf;
         for (int i=0; i<size/4; ++i) {
           data[i] = words[i];
         }
         f.close();
+	delete[] buf;
         update.write(!update.read());
         return true;
       }

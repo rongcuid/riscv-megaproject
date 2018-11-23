@@ -62,16 +62,6 @@ module csr_ehu
    reg 		     irq_mtimecmp_p;
 
    wire 	      FD_exception, XB_exception;
-   // There exists an exception from FD stage
-   assign FD_exception = XB_FD_exception_unsupported_category |
-			 XB_FD_exception_illegal_instruction |
-			 XB_FD_exception_ecall |
-			 XB_FD_exception_ebreak |
-			 XB_FD_exception_instruction_misaligned |
-			 XB_FD_exception_load_misaligned |
-			 XB_FD_exception_store_misaligned;
-   // There exists an exception from XB stage
-   assign XB_exception = XB_exception_illegal_instruction | irq_mtimecmp;
    // Output for PC update
    assign csr_mepc = {mepc[31:2], 2'b0};
    // Output for Machine Trap Vector Base Addr
@@ -104,6 +94,17 @@ module csr_ehu
 			   | initiate_illinst | initiate_misaligned;
       //initiate_exception = initiate_illinst | initiate_misaligned;
    end
+
+   // There exists an exception from FD stage
+   assign FD_exception = XB_FD_exception_unsupported_category |
+			 XB_FD_exception_illegal_instruction |
+			 XB_FD_exception_ecall |
+			 XB_FD_exception_ebreak |
+			 XB_FD_exception_instruction_misaligned |
+			 XB_FD_exception_load_misaligned |
+			 XB_FD_exception_store_misaligned;
+   // There exists an exception from XB stage
+   assign XB_exception = XB_exception_illegal_instruction | initiate_irq_mtimecmp;
 
    // The operand to operate on target CSR
    wire [31:0] 	     operand;
@@ -204,9 +205,9 @@ module csr_ehu
 	   end
 	   `CSR_MEPC: begin
 	      if (really_read) data_out <= {mepc, 2'b0};
-	      if (really_write) mepc <= operand[31:2];
-	      if (really_set) mepc <= mepc | operand[31:2];
-	      if (really_clear) mepc <= mepc & ~operand[31:2];
+	      if (really_write) mepc[31:2] <= operand[31:2];
+	      if (really_set) mepc[31:2] <= mepc[31:2] | operand[31:2];
+	      if (really_clear) mepc[31:2] <= mepc & ~operand[31:2];
 	   end
            `CSR_MCAUSE: begin
               if (really_read) data_out <= mcause;
@@ -273,7 +274,7 @@ module csr_ehu
             // happen in XB stage, a CSR exception's PC is in FD stage
             // Note that timer interrupt has higher priority
 	    mepc <= XB_pc[31:2];
-            if (irq_mtimecmp) begin
+            if (initiate_irq_mtimecmp) begin
 	       mcause <= {1'b0, 31'd7};
 	       mtval <= 32'b0;
             end
