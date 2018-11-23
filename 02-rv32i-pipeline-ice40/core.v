@@ -116,7 +116,7 @@ module core
 
    instruction_decoder inst_dec
      (
-      .inst(im_do),
+      .inst(im_do), .d_rs1_1_0(FD_d_rs1[1:0]),
       .immediate(FD_imm),
       .alu_is_signed(FD_alu_is_signed),
       .aluop1_sel(FD_aluop1_sel), .aluop2_sel(FD_aluop2_sel), 

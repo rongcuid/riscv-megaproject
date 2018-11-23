@@ -8,7 +8,7 @@
 module instruction_decoder
   (
    // Inputs
-   inst,
+   inst, d_rs1_1_0,
    // Outputs
    immediate,
    alu_is_signed, aluop1_sel, aluop2_sel, alu_op,
@@ -31,6 +31,7 @@ module instruction_decoder
 `include "core/opcode.vh"
    // The instruction to be decoded
    input wire [31:0] inst;
+   input wire [1:0] d_rs1_1_0;
    // Immediate value
    output [31:0]     immediate;
    // Signed/Unsigned operation for XB ALU
@@ -129,6 +130,9 @@ module instruction_decoder
       endcase // case (instr_IURJBS)
    end // block: IMMEDIATE_DECODE
 
+   reg [1:0] mem_align;
+   assign mem_align = immediate[1:0] + d_rs1_1_0;
+
    wire [2:0] funct3;
    wire [6:0] funct7;
    assign funct3 = inst[14:12];
@@ -147,12 +151,12 @@ module instruction_decoder
    reg 	      exception_store_misaligned;
    //output reg        exception_ecall;
    integer    aluop1_sel, aluop2_sel, alu_op;
+   // Register fields
+   assign a_rs1 = (opcode[6:2] == `LUI) ? 5'd0 : inst[19:15];
+   assign a_rs2 = inst[24:20];
+   assign a_rd  = inst[11:7];
    // Logic to generate control signals
    always @ (*) begin : CONTROL_SIG_GENERATOR
-      // Default register fields
-      a_rs1 = inst[19:15];
-      a_rs2 = inst[24:20];
-      a_rd  = inst[11:7];
       // Default ALU selections
       alu_is_signed = 1'b1;
       aluop1_sel = `ALUOP1_RS1;
@@ -223,7 +227,7 @@ module instruction_decoder
 	   alu_op = `ALU_ADD;
 	   regwrite = 1'b1;
 	   // 0 + imm
-	   a_rs1 = 5'd0;
+	   //a_rs1 = 5'd0;
 	end
 	`AUIPC: begin
 	   // AUIPC loads upper-20 bits of PC, adds immediate, and
@@ -314,7 +318,7 @@ module instruction_decoder
 	   case (funct3)
 	     3'b000, 3'b100: begin : LB
 		mem_is_signed = (funct3 == 3'b000) ? 1'b1 : 1'b0;
-		case (immediate[1:0])
+		case (mem_align[1:0])
 		  2'b00: begin
 		     dm_be = 4'b0001;
 		  end
@@ -329,18 +333,18 @@ module instruction_decoder
 		  end
 		  default:
 		    dm_be = 4'bX;
-		endcase // case (immediate[1:0])
+		endcase // case (mem_align[1:0])
 	     end
 	     3'b001, 3'b101: begin : LH
 		mem_is_signed = (funct3 == 3'b001) ? 1'b1 : 1'b0;
-		exception_load_misaligned = immediate[0] ? 1'b1 : 1'b0;
-		dm_be = immediate[0] ? 4'b0000
-			: immediate[1] ? 4'b1100 : 4'b0011;
+		exception_load_misaligned = mem_align[0] ? 1'b1 : 1'b0;
+		dm_be = mem_align[0] ? 4'b0000
+			: mem_align[1] ? 4'b1100 : 4'b0011;
 	     end
 	     3'b010: begin : LW
 		dm_be = 4'b1111;
 		exception_load_misaligned 
-		  = (immediate[0] | immediate[1]) ? 1'b1 : 1'b0;
+		  = (mem_align[0] | mem_align[1]) ? 1'b1 : 1'b0;
 	     end
 	     default: begin 
 		exception_illegal_instruction = 1'b1;
@@ -352,7 +356,7 @@ module instruction_decoder
 	   dm_we = 1'b1;
 	   case (funct3)
 	     3'b000: begin : SB
-		case (immediate[1:0])
+		case (mem_align[1:0])
 		  2'b00: begin
 		     dm_be = 4'b0001;
 		  end
@@ -365,16 +369,16 @@ module instruction_decoder
 		  2'b11: begin
 		     dm_be = 4'b1000;
 		  end
-		endcase // case (immediate[1:0])
+		endcase // case (mem_align[1:0])
 	     end
 	     3'b001: begin : SH
-		exception_store_misaligned = immediate[0] ? 1'b1 : 1'b0;
-		dm_be = immediate[0] ? 4'b0
-			: immediate[1] ? 4'b1100 : 4'b0011;
-		// if (immediate[0])
+		exception_store_misaligned = mem_align[0] ? 1'b1 : 1'b0;
+		dm_be = mem_align[0] ? 4'b0
+			: mem_align[1] ? 4'b1100 : 4'b0011;
+		// if (mem_align[0])
 		//   exception_store_misaligned = 1'b1;
 		// else begin
-		//    if (immediate[1])
+		//    if (mem_align[1])
 		//      dm_be = 4'b1100;
 		//    else
 		//      dm_be = 4'b0011;
@@ -383,8 +387,8 @@ module instruction_decoder
 	     3'b010: begin : SW
 		dm_be = 4'b1111;
 		exception_store_misaligned
-		  = (immediate[0] | immediate[1]) ? 1'b1 : 1'b0;
-		// if (immediate[0] | immediate[1])
+		  = (mem_align[0] | mem_align[1]) ? 1'b1 : 1'b0;
+		// if (mem_align[0] | mem_align[1])
 		//   exception_store_misaligned = 1'b1;
 	     end
 	     default: begin 
