@@ -8,7 +8,7 @@
 module instruction_decoder
   (
    // Inputs
-   inst, d_rs1_1_0,
+   inst, aluout_1_0,
    // Outputs
    immediate,
    alu_is_signed, aluop1_sel, aluop2_sel, alu_op,
@@ -31,7 +31,7 @@ module instruction_decoder
 `include "core/opcode.vh"
    // The instruction to be decoded
    input wire [31:0] inst;
-   input wire [1:0] d_rs1_1_0;
+   input wire [1:0] aluout_1_0;
    // Immediate value
    output [31:0]     immediate;
    // Signed/Unsigned operation for XB ALU
@@ -129,9 +129,6 @@ module instruction_decoder
 	end
       endcase // case (instr_IURJBS)
    end // block: IMMEDIATE_DECODE
-
-   reg [1:0] mem_align;
-   assign mem_align = immediate[1:0] + d_rs1_1_0;
 
    wire [2:0] funct3;
    wire [6:0] funct7;
@@ -318,7 +315,7 @@ module instruction_decoder
 	   case (funct3)
 	     3'b000, 3'b100: begin : LB
 		mem_is_signed = (funct3 == 3'b000) ? 1'b1 : 1'b0;
-		case (mem_align[1:0])
+		case (aluout_1_0[1:0])
 		  2'b00: begin
 		     dm_be = 4'b0001;
 		  end
@@ -333,18 +330,18 @@ module instruction_decoder
 		  end
 		  default:
 		    dm_be = 4'bX;
-		endcase // case (mem_align[1:0])
+		endcase // case (aluout_1_0[1:0])
 	     end
 	     3'b001, 3'b101: begin : LH
 		mem_is_signed = (funct3 == 3'b001) ? 1'b1 : 1'b0;
-		exception_load_misaligned = mem_align[0] ? 1'b1 : 1'b0;
-		dm_be = mem_align[0] ? 4'b0000
-			: mem_align[1] ? 4'b1100 : 4'b0011;
+		exception_load_misaligned = aluout_1_0[0] ? 1'b1 : 1'b0;
+		dm_be = aluout_1_0[0] ? 4'b0000
+			: aluout_1_0[1] ? 4'b1100 : 4'b0011;
 	     end
 	     3'b010: begin : LW
 		dm_be = 4'b1111;
 		exception_load_misaligned 
-		  = (mem_align[0] | mem_align[1]) ? 1'b1 : 1'b0;
+		  = (aluout_1_0[0] | aluout_1_0[1]) ? 1'b1 : 1'b0;
 	     end
 	     default: begin 
 		exception_illegal_instruction = 1'b1;
@@ -356,7 +353,7 @@ module instruction_decoder
 	   dm_we = 1'b1;
 	   case (funct3)
 	     3'b000: begin : SB
-		case (mem_align[1:0])
+		case (aluout_1_0[1:0])
 		  2'b00: begin
 		     dm_be = 4'b0001;
 		  end
@@ -369,16 +366,16 @@ module instruction_decoder
 		  2'b11: begin
 		     dm_be = 4'b1000;
 		  end
-		endcase // case (mem_align[1:0])
+		endcase // case (aluout_1_0[1:0])
 	     end
 	     3'b001: begin : SH
-		exception_store_misaligned = mem_align[0] ? 1'b1 : 1'b0;
-		dm_be = mem_align[0] ? 4'b0
-			: mem_align[1] ? 4'b1100 : 4'b0011;
-		// if (mem_align[0])
+		exception_store_misaligned = aluout_1_0[0] ? 1'b1 : 1'b0;
+		dm_be = aluout_1_0[0] ? 4'b0
+			: aluout_1_0[1] ? 4'b1100 : 4'b0011;
+		// if (aluout_1_0[0])
 		//   exception_store_misaligned = 1'b1;
 		// else begin
-		//    if (mem_align[1])
+		//    if (aluout_1_0[1])
 		//      dm_be = 4'b1100;
 		//    else
 		//      dm_be = 4'b0011;
@@ -387,8 +384,8 @@ module instruction_decoder
 	     3'b010: begin : SW
 		dm_be = 4'b1111;
 		exception_store_misaligned
-		  = (mem_align[0] | mem_align[1]) ? 1'b1 : 1'b0;
-		// if (mem_align[0] | mem_align[1])
+		  = (aluout_1_0[0] | aluout_1_0[1]) ? 1'b1 : 1'b0;
+		// if (aluout_1_0[0] | aluout_1_0[1])
 		//   exception_store_misaligned = 1'b1;
 	     end
 	     default: begin 
