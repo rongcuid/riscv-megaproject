@@ -111,7 +111,8 @@ module core
    reg 	       XB_csr_writeback;
 
    assign dm_be = FD_bubble ? 4'b0 : FD_dm_be;
-   assign dm_we = FD_bubble ? 1'b0 : FD_dm_we;
+   assign dm_we = (FD_exception_store_misaligned | FD_bubble) ?
+     1'b0 : FD_dm_we;
    assign dm_is_signed = FD_dm_is_signed;
 
    instruction_decoder inst_dec
