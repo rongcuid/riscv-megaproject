@@ -5,9 +5,9 @@ module core_top
 (
   input wire 	      clk, 
   input wire 	      resetb,
-  output wire [11:2] rom_addr, 
+  output wire [13:2] rom_addr, 
   input wire [31:0]  rom_data, 
-  output wire [11:2] rom_addr_2, 
+  output wire [13:2] rom_addr_2, 
   input wire [31:0]  rom_data_2, 
   output wire [7:0]  io_addr,
   output wire 	      io_en, 

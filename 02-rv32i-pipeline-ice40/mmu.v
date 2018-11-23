@@ -51,7 +51,7 @@ module mmu(
  // DM sign extend or unsigned extend
  input wire 	     is_signed;
  // IM addr out to ROM
- output wire [11:2] im_addr_out, im_addr_out_2;
+ output wire [13:2] im_addr_out, im_addr_out_2;
  // IM data from ROM, IO data from IO bank
  input wire [31:0]  im_data, im_data_2, io_data_read;
  // IO data to IO bank, DM data output
@@ -93,10 +93,10 @@ module mmu(
  // IO enable, IO write enable
  reg 			    io_en_tmp, io_we_tmp;
 
- // In this implementaion, the IM ROM address is simply the 11:2 bits of IM address input
- assign im_addr_out[11:2] = im_addr[11:2];
+ // In this implementaion, the IM ROM address is simply the 13:2 bits of IM address input
+ assign im_addr_out[13:2] = im_addr[13:2];
  // Second port uses DM addr
- assign im_addr_out_2[11:2] = dm_addr[11:2];
+ assign im_addr_out_2[13:2] = dm_addr[13:2];
 
  // BRAM bank in interleaved configuration
  BRAM_SSP  #(

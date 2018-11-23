@@ -1,36 +1,36 @@
-#ifndef __ROM_1024_32_H__
-#define __ROM_1024_32_H__
+#ifndef __ROM_3840_32_H__
+#define __ROM_3840_32_H__
 
 #include <fstream>
 #include <systemc.h>
-class rom_1024x32_t : public sc_module
+class rom_3840x32_t : public sc_module
 {
   public:
     sc_in<uint32_t> addr1;
     sc_in<uint32_t> addr2;
     sc_out<uint32_t> data1;
     sc_out<uint32_t> data2;
-    uint32_t data[1024];
+    uint32_t data[3840];
 
     void port1() {
       while(true) {
         uint32_t addrw32 = addr1.read();
-        uint32_t addrw9 = addrw32 % 1024;
-        data1.write(data[addrw9]);
+        uint32_t addrw11 = addrw32 % 4096;
+        data1.write(data[addrw11]);
         wait();
       }
     }
     void port2() {
       while(true) {
         uint32_t addrw32 = addr2.read();
-        uint32_t addrw9 = addrw32 % 1024;
-        data2.write(data[addrw9]);
+        uint32_t addrw11 = addrw32 % 4096;
+        data2.write(data[addrw11]);
         wait();
       }
     }
 
     void clear_memory() {
-      for (int i=0; i<1024; ++i) data[i] = 0;
+      for (int i=0; i<3840; ++i) data[i] = 0;
       update.write(!update.read());
     }
     bool load_binary(const std::string& path)
@@ -62,7 +62,7 @@ class rom_1024x32_t : public sc_module
       }
     }
 
-    SC_CTOR(rom_1024x32_t)
+    SC_CTOR(rom_3840x32_t)
       : update("update")
     {
       update.write(false);

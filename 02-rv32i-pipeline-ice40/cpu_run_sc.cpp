@@ -4,7 +4,7 @@
 #include <fstream>
 #include <iomanip>
 
-#include "rom_1024x32_t.hpp"
+#include "rom_3840x32_t.hpp"
 #include "Vcore_top.h"
 #include "Vcore_top_core_top.h"
 #include "Vcore_top_core.h"
@@ -19,7 +19,7 @@ class cpu_run_t : public sc_module
 public:
   Vcore_top* dut;
 
-  rom_1024x32_t* instruction_rom;
+  rom_3840x32_t* instruction_rom;
 
   sc_in<bool> clk_tb;
   sc_signal<bool> resetb_tb;
@@ -85,7 +85,7 @@ public:
 
     test_result_base_addr = 0;
 
-    instruction_rom = new rom_1024x32_t("im_rom");
+    instruction_rom = new rom_3840x32_t("im_rom");
     instruction_rom->addr1(rom_addr_tb);
     instruction_rom->addr2(rom_addr_2_tb);
     instruction_rom->data1(rom_data_tb);
