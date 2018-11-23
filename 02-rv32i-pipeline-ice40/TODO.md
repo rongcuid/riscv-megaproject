@@ -18,7 +18,7 @@ Communication between simulator and program is done through IO port 0x80000000
 ## Prepare for Zephyr
 [X] Port to Zephyr toolchain
 [X] Port Zephyr OS
-[ ] Implement ECALL
+[X] Implement ECALL and EBREAK
 [ ] Implement mtime and mtimecmp
 [ ] Implement system timer interrupt
 
