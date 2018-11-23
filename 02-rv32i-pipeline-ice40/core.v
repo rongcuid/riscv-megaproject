@@ -25,6 +25,8 @@ module core
    clk, resetb,
    // MMU
    dm_we, im_addr, im_do, dm_addr, dm_di, dm_do, dm_be, dm_is_signed,
+   // IRQ
+   irq_mtimecmp,
    // Debug
    FD_disasm_opcode, FD_PC
    );
@@ -43,6 +45,8 @@ module core
    reg [31:0] 	     im_addr;
    wire [3:0] 	     dm_be;
    
+   // Timer interrupt
+   input wire irq_mtimecmp;
    
    // Instruction Decode
    wire [31:0] 	     FD_imm;
@@ -274,9 +278,10 @@ module core
       .XB_FD_exception_ebreak(XB_FD_exception_ebreak),
       .XB_FD_exception_load_misaligned(XB_FD_exception_load_misaligned),
       .XB_FD_exception_store_misaligned(XB_FD_exception_store_misaligned),
+      .irq_mtimecmp(irq_mtimecmp),
       .src_dst(FD_imm[11:0]),
       .d_rs1(FD_d_rs1), .uimm(FD_a_rs1), .FD_aluout(FD_aluout),
-      .nextPC(nextPC), .XB_pc(XB_PC), .data_out(XB_csr_out), 
+      .nextPC(nextPC), .XB_pc(XB_PC[31:2]), .data_out(XB_csr_out), 
       .csr_mepc(CSR_mepc), .csr_mtvec(CSR_mtvec)
       );
 

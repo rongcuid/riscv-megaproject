@@ -17,8 +17,7 @@ module core_top
   output wire [255:0] FD_disasm_opcode,
   output wire [31:0] FD_PC,
   input wire mtime_we,
-  output wire [31:0] mtime_dout,
-  output wire irq_mtimecmp
+  output wire [31:0] mtime_dout
 );
 
 wire 	      dm_we;
@@ -29,6 +28,7 @@ wire [31:0] 	      dm_di;
 wire [31:0] 	      dm_do;
 wire [3:0] 	      dm_be;
 wire 	      dm_is_signed;
+wire irq_mtimecmp;
 
 core CPU0
 (
@@ -36,6 +36,7 @@ core CPU0
   .dm_we(dm_we), .im_addr(im_addr), .im_do(im_do),
   .dm_addr(dm_addr), .dm_di(dm_di), .dm_do(dm_do),
   .dm_be(dm_be), .dm_is_signed(dm_is_signed),
+  .irq_mtimecmp(irq_mtimecmp),
   .FD_disasm_opcode(FD_disasm_opcode),
   .FD_PC(FD_PC)
 );

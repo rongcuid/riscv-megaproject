@@ -37,7 +37,6 @@ public:
 
   sc_signal<bool> mtime_we_tb;
   sc_signal<uint32_t> mtime_dout_tb;
-  sc_signal<bool> irq_mtimecmp_tb;
 
   sc_signal<sc_bv<256> > FD_disasm_opcode;
   char disasm[32];
@@ -64,7 +63,6 @@ public:
     , io_we_tb("io_we_tb")
     , mtime_we_tb("mtime_we_tb")
     , mtime_dout_tb("mtime_dout_tb")
-    , irq_mtimecmp_tb("irq_mtimecmp_tb")
     , io_data_read_tb("io_data_read_tb")
     , io_data_write_tb("io_data_write_tb")
     , FD_disasm_opcode("FD_disasm_opcode")
@@ -110,7 +108,6 @@ public:
 
     dut->mtime_we(mtime_we_tb);
     dut->mtime_dout(mtime_dout_tb);
-    dut->irq_mtimecmp(irq_mtimecmp_tb);
   }
 
   ~cpu_run_t()
