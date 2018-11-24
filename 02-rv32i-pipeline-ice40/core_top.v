@@ -5,10 +5,10 @@ module core_top
 (
   input wire 	      clk, 
   input wire 	      resetb,
-  output wire [13:2] rom_addr, 
-  input wire [31:0]  rom_data, 
-  output wire [13:2] rom_addr_2, 
-  input wire [31:0]  rom_data_2, 
+  //output wire [13:2] rom_addr, 
+  //input wire [31:0]  rom_data, 
+  //output wire [13:2] rom_addr_2, 
+  //input wire [31:0]  rom_data_2, 
   output wire [7:0]  io_addr,
   output wire 	      io_en, 
   output wire 	      io_we, 
@@ -48,8 +48,8 @@ mmu MMU0
   .im_addr(im_addr), .im_do(im_do),
   .dm_addr(dm_addr), .dm_di(dm_di), .dm_do(dm_do),
   .dm_be(dm_be), .is_signed(dm_is_signed),
-  .im_addr_out(rom_addr), .im_data(rom_data),
-  .im_addr_out_2(rom_addr_2), .im_data_2(rom_data_2),
+  //.im_addr_out(rom_addr), .im_data(rom_data),
+  //.im_addr_out_2(rom_addr_2), .im_data_2(rom_data_2),
   .io_addr(io_addr), .io_en(io_en), .io_we(io_we),
   .io_data_read(io_data_read), .io_data_write(io_data_write)
 );

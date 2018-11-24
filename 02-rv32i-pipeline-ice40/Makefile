@@ -3,7 +3,7 @@ RISCV_PREFIX ?= riscv32-zephyr-elf-
 CC=$(RISCV_PREFIX)gcc
 AS=$(RISCV_PREFIX)as
 OBJCOPY=$(RISCV_PREFIX)objcopy
-all: run_compliance_quick
+all: run_core_tb
 #	echo "(MM) Compiling and running all tests"
 
 run_compliance: compile_cpu_run
@@ -90,7 +90,7 @@ run_mmu_tb: compile_mmu_tb
 	./tb_out/mmu_tb
 
 tb_out/%.bin: test/%.S
-	$(AS) -march=rv32i $^ -o $(@:.bin=.elf)
+	$(AS) -march=RV32I $^ -o $(@:.bin=.elf)
 	$(OBJCOPY) -O binary $(@:.bin=.elf) $@
 #	riscv32-unknown-elf-as $^ -o $(@:.bin=.elf)
 #	riscv32-unknown-elf-objcopy -O binary $(@:.bin=.elf) $@
@@ -113,12 +113,12 @@ TEST_PROGRAMS+=tb_out/13-csr.bin
 TEST_PROGRAMS+=tb_out/14-mem.bin
 TEST_PROGRAMS+=tb_out/15-exception.bin
 
-compile_core_tb: core_top.v core_top_sc.cpp SB_SPRAM256KA.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v 
+compile_core_tb: core_top.v core_top_sc.cpp EBRAM_ROM.v SB_SPRAM256KA.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v 
 	echo "(MM) Compiling CPU Top testbench"
 	verilator -Wall --sc $^ --exe -o ../tb_out/cpu_top_tb
 	make -C obj_dir -f Vcore_top.mk
 
-compile_cpu_run: cpu_run_sc.cpp core_top.v SB_SPRAM256KA.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v timer.v
+compile_cpu_run: cpu_run_sc.cpp core_top.v SB_SPRAM256KA.v EBRAM_ROM.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v timer.v
 	echo "(MM) Compiling CPU Simulator"
 	verilator -Wall --sc $^ --top-module core_top --exe -o ../tb_out/cpu_run
 	make -C obj_dir -f Vcore_top.mk

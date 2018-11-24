@@ -20,6 +20,7 @@ test_csrw:
 	li x2, 0xB
 	csrw mepc, x2
 	csrr x1, mepc
+        li x2, 0x8
 	bne x1, x2, test_failed
 	
 	# mcause

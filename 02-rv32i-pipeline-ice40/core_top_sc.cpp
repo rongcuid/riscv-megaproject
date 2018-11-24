@@ -3,11 +3,13 @@
 #include <sstream>
 #include <iomanip>
 
-#include "rom_1024x32_t.hpp"
+//#include "rom_1024x32_t.hpp"
 #include "Vcore_top.h"
 #include "Vcore_top_core_top.h"
 #include "Vcore_top_core.h"
+#include "Vcore_top_mmu.h"
 #include "Vcore_top_regfile.h"
+#include "Vcore_top_EBRAM_ROM.h"
 
 std::string bv_to_opcode(const sc_bv<256>& bv);
 
@@ -18,21 +20,23 @@ class cpu_top_tb_t : public sc_module
 public:
   Vcore_top* dut;
 
-  rom_1024x32_t* instruction_rom;
+  //rom_1024x32_t* instruction_rom;
 
   sc_in<bool> clk_tb;
   sc_signal<bool> resetb_tb;
 
-  sc_signal<uint32_t> rom_addr_tb;
-  sc_signal<uint32_t> rom_data_tb;
-  sc_signal<uint32_t> rom_addr_2_tb;
-  sc_signal<uint32_t> rom_data_2_tb;
+  //sc_signal<uint32_t> rom_addr_tb;
+  //sc_signal<uint32_t> rom_data_tb;
+  //sc_signal<uint32_t> rom_addr_2_tb;
+  //sc_signal<uint32_t> rom_data_2_tb;
   
   sc_signal<uint32_t> io_addr_tb;
   sc_signal<bool> io_en_tb;
   sc_signal<bool> io_we_tb;
   sc_signal<uint32_t> io_data_read_tb;
   sc_signal<uint32_t> io_data_write_tb;
+  sc_signal<bool> mtime_we_tb;
+  sc_signal<uint32_t> mtime_dout_tb;
 
   sc_signal<sc_bv<256> > FD_disasm_opcode;
   char disasm[32];
@@ -44,15 +48,17 @@ public:
   SC_CTOR(cpu_top_tb_t)
     : clk_tb("clk_tb")
     , resetb_tb("resetb_tb")
-    , rom_addr_tb("rom_addr_tb")
-    , rom_data_tb("rom_data_tb")
-    , rom_addr_2_tb("rom_addr_2_tb")
-    , rom_data_2_tb("rom_data_2_tb")
+    //, rom_addr_tb("rom_addr_tb")
+    //, rom_data_tb("rom_data_tb")
+    //, rom_addr_2_tb("rom_addr_2_tb")
+    //, rom_data_2_tb("rom_data_2_tb")
     , io_addr_tb("io_addr_tb")
     , io_en_tb("io_en_tb")
     , io_we_tb("io_we_tb")
     , io_data_read_tb("io_data_read_tb")
     , io_data_write_tb("io_data_write_tb")
+    , mtime_we_tb("mtime_we_tb")
+    , mtime_dout_tb("mtime_dout_tb")
     , FD_disasm_opcode("FD_disasm_opcode")
     , FD_PC("FD_PC")
   {
@@ -64,22 +70,26 @@ public:
       io_memory_tb[i] = sc_signal<uint32_t>(ss.str().c_str());
       sensitive << io_memory_tb[i];
     }
+    sensitive << io_en_tb;
+    sensitive << io_we_tb;
+    sensitive << io_data_read_tb;
+    sensitive << io_data_write_tb;
 
     SC_CTHREAD(test_thread, clk_tb.pos());
 
-    instruction_rom = new rom_1024x32_t("im_rom");
-    instruction_rom->addr1(rom_addr_tb);
-    instruction_rom->addr2(rom_addr_2_tb);
-    instruction_rom->data1(rom_data_tb);
-    instruction_rom->data2(rom_data_2_tb);
+    //instruction_rom = new rom_1024x32_t("im_rom");
+    //instruction_rom->addr1(rom_addr_tb);
+    //instruction_rom->addr2(rom_addr_2_tb);
+    //instruction_rom->data1(rom_data_tb);
+    //instruction_rom->data2(rom_data_2_tb);
 
     dut = new Vcore_top("dut");
     dut->clk(clk_tb);
     dut->resetb(resetb_tb);
-    dut->rom_addr(rom_addr_tb);
-    dut->rom_data(rom_data_tb);
-    dut->rom_addr_2(rom_addr_2_tb);
-    dut->rom_data_2(rom_data_2_tb);
+    //dut->rom_addr(rom_addr_tb);
+    //dut->rom_data(rom_data_tb);
+    //dut->rom_addr_2(rom_addr_2_tb);
+    //dut->rom_data_2(rom_data_2_tb);
     dut->io_addr(io_addr_tb);
     dut->io_en(io_en_tb);
     dut->io_we(io_we_tb);
@@ -87,6 +97,9 @@ public:
     dut->io_data_write(io_data_write_tb);
     dut->FD_disasm_opcode(FD_disasm_opcode);
     dut->FD_PC(FD_PC);
+
+    dut->mtime_we(mtime_we_tb);
+    dut->mtime_dout(mtime_dout_tb);
   }
 
   ~cpu_top_tb_t()
@@ -106,7 +119,34 @@ public:
   
   bool load_program(const std::string& path)
   {
-    instruction_rom->load_binary(path);
+    //instruction_rom->load_binary(path);
+    for (int i=0; i<3072; ++i) {
+      dut->core_top->MMU0->rom0->ROM[i] = 0;
+    }
+    ifstream f(path, std::ios::binary);
+    if (f.is_open()) {
+      f.seekg(0, f.end);
+      int size = f.tellg();
+      f.seekg(0, f.beg);
+      auto buf = new char[size];
+      f.read(buf, size);
+      // std::vector<unsigned char> buf
+      //   (std::istreambuf_iterator<char>(f), {});
+      if (size == 0) return false;
+      if (size % 4 != 0) return false;
+
+      auto words = (uint32_t*) buf;
+      for (int i=0; i<size/4; ++i) {
+        dut->core_top->MMU0->rom0->ROM[i] = words[i];
+      }
+      f.close();
+      delete[] buf;
+      //update.write(!update.read());
+      return true;
+    }
+    else {
+      return false;
+    }
   }
 
   bool report_failure(uint32_t failure_vec, uint32_t prev_PC) 
@@ -121,11 +161,14 @@ public:
 
   void view_snapshot_pc()
   {
-      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
-		<< ", FD_PC=0x" 
-                << std::hex 
-                << FD_PC
-		<< std::endl;
+    std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+      << std::hex 
+      << ", FD_PC=0x" 
+      << FD_PC
+      //<< ", inst: "
+      //<< dut->core_top->CPU0->im_do
+      //<< ", ex:mepc:br:j:jr" 
+      << std::endl;
   }
   void view_snapshot_hex()
   {
@@ -133,7 +176,7 @@ public:
 		<< ", FD_PC=0x" 
                 << std::hex 
                 << FD_PC
-		<< ", x1 = 0x" << std::uppercase << std::hex
+		<< ", x1 = 0x" << std::hex
 		<< dut->core_top->CPU0->RF->data[1]
 		<< std::endl;
   }
@@ -172,9 +215,23 @@ public:
 void cpu_top_tb_t::io_thread()
 {
   while(true) {
+    bool en = io_en_tb.read();
+    bool we = io_we_tb.read();
     uint32_t addrw32 = io_addr_tb.read();
     uint32_t addrw6 = (addrw32 >> 2) % 64;
     io_data_read_tb.write(io_memory_tb[addrw6].read());
+
+    {
+      // Timer connection
+      bool timer_op = addrw32 >= 0x10 && addrw32 < 0x20;
+      mtime_we_tb.write(false);
+      if (timer_op) {
+        mtime_we_tb.write(we);
+        if (en) {
+          io_data_read_tb.write(mtime_dout_tb.read());
+        }
+      }
+    }
     wait();
   }
 }
