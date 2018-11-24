@@ -4,12 +4,15 @@
 #include <iomanip>
 
 //#include "rom_1024x32_t.hpp"
-#include "Vcore_top.h"
-#include "Vcore_top_core_top.h"
-#include "Vcore_top_core.h"
-#include "Vcore_top_mmu.h"
-#include "Vcore_top_regfile.h"
-#include "Vcore_top_EBRAM_ROM.h"
+#include "Vcpu_top.h"
+#include "Vcpu_top_cpu_top.h"
+#include "Vcpu_top_core_top.h"
+#include "Vcpu_top_core_top.h"
+#include "Vcpu_top_core.h"
+#include "Vcpu_top_instruction_decoder.h"
+#include "Vcpu_top_mmu.h"
+#include "Vcpu_top_regfile.h"
+#include "Vcpu_top_EBRAM_ROM.h"
 
 std::string bv_to_opcode(const sc_bv<256>& bv);
 
@@ -18,93 +21,40 @@ std::string bv_to_opcode(const sc_bv<256>& bv);
 class cpu_top_tb_t : public sc_module
 {
 public:
-  Vcore_top* dut;
+  Vcpu_top* dut;
+  uint32_t* ROM;
+  uint32_t* FD_PC;
+  char* FD_disasm_opcode;
 
   //rom_1024x32_t* instruction_rom;
 
   sc_in<bool> clk_tb;
   sc_signal<bool> resetb_tb;
 
-  //sc_signal<uint32_t> rom_addr_tb;
-  //sc_signal<uint32_t> rom_data_tb;
-  //sc_signal<uint32_t> rom_addr_2_tb;
-  //sc_signal<uint32_t> rom_data_2_tb;
-  
-  sc_signal<uint32_t> io_addr_tb;
-  sc_signal<bool> io_en_tb;
-  sc_signal<bool> io_we_tb;
-  sc_signal<uint32_t> io_data_read_tb;
-  sc_signal<uint32_t> io_data_write_tb;
-  sc_signal<bool> mtime_we_tb;
-  sc_signal<uint32_t> mtime_dout_tb;
-
-  sc_signal<sc_bv<256> > FD_disasm_opcode;
-  char disasm[32];
-
-  sc_signal<uint32_t> FD_PC;
-
-  sc_signal<uint32_t> io_memory_tb[64];
-
   SC_CTOR(cpu_top_tb_t)
     : clk_tb("clk_tb")
     , resetb_tb("resetb_tb")
-    //, rom_addr_tb("rom_addr_tb")
-    //, rom_data_tb("rom_data_tb")
-    //, rom_addr_2_tb("rom_addr_2_tb")
-    //, rom_data_2_tb("rom_data_2_tb")
-    , io_addr_tb("io_addr_tb")
-    , io_en_tb("io_en_tb")
-    , io_we_tb("io_we_tb")
-    , io_data_read_tb("io_data_read_tb")
-    , io_data_write_tb("io_data_write_tb")
-    , mtime_we_tb("mtime_we_tb")
-    , mtime_dout_tb("mtime_dout_tb")
-    , FD_disasm_opcode("FD_disasm_opcode")
-    , FD_PC("FD_PC")
   {
-    SC_THREAD(io_thread);
-    sensitive << io_addr_tb;
-    for (int i=0; i<64; ++i) {
-      std::stringstream ss;
-      ss << "io_memory_" << i;
-      io_memory_tb[i] = sc_signal<uint32_t>(ss.str().c_str());
-      sensitive << io_memory_tb[i];
-    }
-    sensitive << io_en_tb;
-    sensitive << io_we_tb;
-    sensitive << io_data_read_tb;
-    sensitive << io_data_write_tb;
-
     SC_CTHREAD(test_thread, clk_tb.pos());
 
-    //instruction_rom = new rom_1024x32_t("im_rom");
-    //instruction_rom->addr1(rom_addr_tb);
-    //instruction_rom->addr2(rom_addr_2_tb);
-    //instruction_rom->data1(rom_data_tb);
-    //instruction_rom->data2(rom_data_2_tb);
-
-    dut = new Vcore_top("dut");
+    dut = new Vcpu_top("dut");
     dut->clk(clk_tb);
     dut->resetb(resetb_tb);
-    //dut->rom_addr(rom_addr_tb);
-    //dut->rom_data(rom_data_tb);
-    //dut->rom_addr_2(rom_addr_2_tb);
-    //dut->rom_data_2(rom_data_2_tb);
-    dut->io_addr(io_addr_tb);
-    dut->io_en(io_en_tb);
-    dut->io_we(io_we_tb);
-    dut->io_data_read(io_data_read_tb);
-    dut->io_data_write(io_data_write_tb);
-    dut->FD_disasm_opcode(FD_disasm_opcode);
-    dut->FD_PC(FD_PC);
-
-    dut->mtime_we(mtime_we_tb);
-    dut->mtime_dout(mtime_dout_tb);
+    ROM = dut->cpu_top->CT0->MMU0->rom0->ROM;
+    FD_PC = &(dut->cpu_top->CT0->CPU0->FD_PC);
+    FD_disasm_opcode = 
+      (char*)dut->cpu_top->CT0->CPU0->inst_dec->disasm_opcode;
   }
 
   ~cpu_top_tb_t()
   {
     delete dut;
+  }
+
+  std::string reverse(char* s) {
+    std::string str(s);
+    std::reverse(str.begin(), str.end());
+    return str;
   }
 
   void reset()
@@ -115,13 +65,11 @@ public:
     wait();
   }
 
-  void io_thread(void);
-  
   bool load_program(const std::string& path)
   {
     //instruction_rom->load_binary(path);
     for (int i=0; i<3072; ++i) {
-      dut->core_top->MMU0->rom0->ROM[i] = 0;
+      ROM[i] = 0;
     }
     ifstream f(path, std::ios::binary);
     if (f.is_open()) {
@@ -137,7 +85,7 @@ public:
 
       auto words = (uint32_t*) buf;
       for (int i=0; i<size/4; ++i) {
-        dut->core_top->MMU0->rom0->ROM[i] = words[i];
+        ROM[i] = words[i];
       }
       f.close();
       delete[] buf;
@@ -151,7 +99,7 @@ public:
 
   bool report_failure(uint32_t failure_vec, uint32_t prev_PC) 
   {
-      if (FD_PC == failure_vec || FD_disasm_opcode.read() == "ILLEGAL ") {
+      if (*FD_PC == failure_vec || reverse(FD_disasm_opcode) == "ILLEGAL ") {
 	std::cout << "(TT) Test failed! prevPC = 0x" 
           << std::hex << prev_PC << std::endl;
         return true;
@@ -161,35 +109,35 @@ public:
 
   void view_snapshot_pc()
   {
-    std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+    std::cout << "(TT) Opcode=" << reverse(FD_disasm_opcode)
       << std::hex 
       << ", FD_PC=0x" 
-      << FD_PC
+      << *FD_PC
       //<< ", inst: "
-      //<< dut->core_top->CPU0->im_do
+      //<< dut->cpu_top->CT0->CPU0->im_do
       //<< ", ex:mepc:br:j:jr" 
       << std::endl;
   }
   void view_snapshot_hex()
   {
-      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+      std::cout << "(TT) Opcode=" << reverse(FD_disasm_opcode)
 		<< ", FD_PC=0x" 
                 << std::hex 
-                << FD_PC
+                << *FD_PC
 		<< ", x1 = 0x" << std::hex
-		<< dut->core_top->CPU0->RF->data[1]
+		<< dut->cpu_top->CT0->CPU0->RF->data[1]
 		<< std::endl;
   }
 
   void view_snapshot_int()
   {
-      std::cout << "(TT) Opcode=" << bv_to_opcode(FD_disasm_opcode.read())
+      std::cout << "(TT) Opcode=" << reverse(FD_disasm_opcode)
 		<< ", FD_PC=0x" 
                 << std::hex 
-                << FD_PC
+                << *FD_PC
 		<< ", x1 = "
                 << std::dec
-		<< static_cast<int32_t>(dut->core_top->CPU0->RF->data[1])
+		<< static_cast<int32_t>(dut->cpu_top->CT0->CPU0->RF->data[1])
 		<< std::endl;
   }
   void test_thread(void);
@@ -211,30 +159,6 @@ public:
   void test14(void);
   void test15(void);
 };
-
-void cpu_top_tb_t::io_thread()
-{
-  while(true) {
-    bool en = io_en_tb.read();
-    bool we = io_we_tb.read();
-    uint32_t addrw32 = io_addr_tb.read();
-    uint32_t addrw6 = (addrw32 >> 2) % 64;
-    io_data_read_tb.write(io_memory_tb[addrw6].read());
-
-    {
-      // Timer connection
-      bool timer_op = addrw32 >= 0x10 && addrw32 < 0x20;
-      mtime_we_tb.write(false);
-      if (timer_op) {
-        mtime_we_tb.write(we);
-        if (en) {
-          io_data_read_tb.write(mtime_dout_tb.read());
-        }
-      }
-    }
-    wait();
-  }
-}
 
 std::string bv_to_opcode(const sc_bv<256>& bv)
 {
@@ -392,10 +316,10 @@ void cpu_top_tb_t::test6()
   }
   else {
     reset();
+    uint32_t prev_PC = 0;
     for (int i=0; i<96; ++i) {
-      if (FD_PC == 0x10 || FD_disasm_opcode.read() == "ILLEGAL ") {
-	std::cout << "(TT) Test failed!" << std::endl;
-      }
+      if (report_failure(0x10, prev_PC)) break;
+      prev_PC = *FD_PC;
       wait();
     }
   }
@@ -417,7 +341,7 @@ void cpu_top_tb_t::test7()
     for (int i=0; i<96; ++i) {
       //view_snapshot_int();
       if (report_failure(0x10, prev_PC)) break;
-      prev_PC = FD_PC;
+      prev_PC = *FD_PC;
       wait();
     }
   }
@@ -439,7 +363,7 @@ void cpu_top_tb_t::test8()
     uint32_t prev_PC = 0;
     for (int i=0; i<96; ++i) {
       if (report_failure(0x10, prev_PC)) break;
-      prev_PC = FD_PC;
+      prev_PC = *FD_PC;
       wait();
     }
   }
@@ -461,7 +385,7 @@ void cpu_top_tb_t::test9()
     uint32_t prev_PC = 0;
     for (int i=0; i<96; ++i) {
       if (report_failure(0x10, prev_PC)) break;
-      prev_PC = FD_PC;
+      prev_PC = *FD_PC;
       wait();
     }
   }
@@ -483,7 +407,7 @@ void cpu_top_tb_t::test10()
     uint32_t prev_PC = 0;
     for (int i=0; i<96; ++i) {
       if (report_failure(0x10, prev_PC)) break;
-      prev_PC = FD_PC;
+      prev_PC = *FD_PC;
       wait();
     }
   }
@@ -505,7 +429,7 @@ void cpu_top_tb_t::test11()
     uint32_t prev_PC = 0;
     for (int i=0; i<96; ++i) {
       if (report_failure(0x10, prev_PC)) break;
-      prev_PC = FD_PC;
+      prev_PC = *FD_PC;
       wait();
     }
   }
@@ -528,7 +452,7 @@ void cpu_top_tb_t::test12()
     for (int i=0; i<96; ++i) {
       //view_snapshot_hex();
       if (report_failure(0x10, prev_PC)) break;
-      prev_PC = FD_PC;
+      prev_PC = *FD_PC;
       wait();
     }
   }
@@ -551,7 +475,7 @@ void cpu_top_tb_t::test13()
     for (int i=0; i<48; ++i) {
       //view_snapshot_int();
       if (report_failure(0x10, prev_PC)) break;
-      prev_PC = FD_PC;
+      prev_PC = *FD_PC;
       wait();
     }
   }
@@ -574,7 +498,7 @@ void cpu_top_tb_t::test14()
     for (int i=0; i<160; ++i) {
       //view_snapshot_hex();
       if (report_failure(0x10, prev_PC)) break;
-      prev_PC = FD_PC;
+      prev_PC = *FD_PC;
       wait();
     }
   }
@@ -597,7 +521,7 @@ void cpu_top_tb_t::test15()
     for (int i=0; i<384; ++i) {
 //      view_snapshot_hex();
       if (report_failure(0x0C, prev_PC)) break;
-      prev_PC = FD_PC;
+      prev_PC = *FD_PC;
       wait();
     }
   }

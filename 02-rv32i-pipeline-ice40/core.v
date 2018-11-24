@@ -26,9 +26,7 @@ module core
    // MMU
    dm_we, im_addr, im_do, dm_addr, dm_di, dm_do, dm_be, dm_is_signed,
    // IRQ
-   irq_mtimecmp,
-   // Debug
-   FD_disasm_opcode, FD_PC
+   irq_mtimecmp
    );
 `include "core/aluop.vh"
 `include "core/exception_vector.vh"
@@ -72,11 +70,10 @@ module core
    reg 		     FD_exception_instruction_misaligned;
    wire 	     FD_exception_load_misaligned;
    wire 	     FD_exception_store_misaligned;
-   output wire [255:0] FD_disasm_opcode;
 
    // Program Counter
    wire 	     FD_initiate_exception;
-   output reg [31:0] FD_PC;
+   reg [31:0] FD_PC /*verilator public*/;
    reg [31:0] 	     nextPC /*verilator public*/;
 
    // FD ALU
@@ -144,8 +141,8 @@ module core
      .exception_ecall(FD_exception_ecall),
      .exception_ebreak(FD_exception_ebreak),
      .exception_load_misaligned(FD_exception_load_misaligned),
-     .exception_store_misaligned(FD_exception_store_misaligned),
-     .disasm_opcode(FD_disasm_opcode)
+     .exception_store_misaligned(FD_exception_store_misaligned)
+     //.disasm_opcode(FD_disasm_opcode)
    );
 
    // Next PC for Branches

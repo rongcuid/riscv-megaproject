@@ -24,9 +24,7 @@ module instruction_decoder
    exception_load_misaligned,
    exception_store_misaligned,
    exception_ecall,
-   exception_ebreak,
-   // Debugging
-   disasm_opcode
+   exception_ebreak
    );
 `include "core/aluop.vh"
 `include "core/opcode.vh"
@@ -475,7 +473,7 @@ end
    end
 
    /* verilator lint_off UNUSED */
-   output reg [255:0] disasm_opcode;
+   reg [255:0] disasm_opcode /*verilator public*/;
 
    always @ (*) begin : DISASM
       case (opcode[6:2])
