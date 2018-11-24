@@ -1,16 +1,13 @@
 # check design hierarchy
-hierarchy
+# hierarchy
 
-# translate processes (always blocks)
-proc; opt
+## translate processes (always blocks)
+#proc; opt
+#
+## detect and optimize FSM encodings
+#fsm; opt
+#
+## implement memories (arrays)
+#memory; opt
 
-# detect and optimize FSM encodings
-fsm; opt
-
-# implement memories (arrays)
-memory; opt
-
-# convert to gate logic
-techmap; opt
-
-synth_ice40 -top cpu_top -json cpu_top.json
+synth_ice40 -top cpu_top -blif cpu_top.blif

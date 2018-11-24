@@ -128,12 +128,15 @@ compile_cpu_run: cpu_run_sc.cpp cpu_top.v core_top.v SPRAM_16Kx16.v EBRAM_ROM.v 
 run_cpu_top_tb: compile_cpu_top_tb $(TEST_PROGRAMS)
 	./tb_out/cpu_top_tb
 
-cpu_top.json: SPRAM_16Kx16.v EBRAM_ROM.v core.v core_top.v cpu_top.v mmu.v regfile.v timer.v io_port.v core/csr_ehu.v core/instruction_decoder.v
-	yosys -p "synth_ice40 -top cpu_top -json $@" $^
+cpu_top.json: SPRAM_16Kx16.v EBRAM_ROM.v core.v core_top.v cpu_top.v mmu.v regfile.v timer.v io_port.v core/csr_ehu.v core/instruction_decoder.v cpu_top.ys
+	yosys $^
  
 compliance_clean:
 	cd riscv-compliance && make clean && cd ..
 
 clean:
 	rm -rf tmp tb_out/* obj_dir
+	rm -f cpu_top.json
+	rm -f cpu_top.asc
+	rm -f cpu_top.blif
 	find . -name "*~" -exec rm -f {} \;
