@@ -15,7 +15,7 @@
 #include "Vcpu_top_mmu.h"
 #include "Vcpu_top_regfile.h"
 #include "Vcpu_top_EBRAM_ROM.h"
-#include "Vcpu_top_SB_SPRAM256KA.h"
+#include "Vcpu_top_SPRAM_16Kx16.h"
 
 class cpu_run_t : public sc_module
 {

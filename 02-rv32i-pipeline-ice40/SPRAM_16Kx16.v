@@ -1,4 +1,4 @@
-module SB_SPRAM256KA
+module SPRAM_16Kx16
   (
    input wire [13:0] addr,
    input wire [15:0] din,
