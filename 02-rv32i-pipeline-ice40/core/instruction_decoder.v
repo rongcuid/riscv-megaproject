@@ -141,7 +141,7 @@ module instruction_decoder
    reg 	      mem_is_signed;
    reg 	      csr_read, csr_write, csr_set, csr_clear, csr_imm;
    
-   reg [4:0]  a_rs1, a_rs2, a_rd;
+   wire [4:0]  a_rs1, a_rs2, a_rd;
    reg 	      exception_unsupported_category;
    reg 	      exception_illegal_instruction;
    reg 	      exception_load_misaligned;

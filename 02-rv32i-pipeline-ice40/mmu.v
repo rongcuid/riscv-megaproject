@@ -86,7 +86,7 @@ module mmu(
    // MMU signed/unsigned extend, pipelined
    reg 			    is_signed_p;
    // IM port 2 pipelined
-   reg [31:0] 		    im_data_2_p;
+   wire [31:0] 		    im_data_2_p;
    // IO Read input, IO read input pipelined, IO write output
    reg [31:0] 		    io_data_write_tmp;
    // IO address
