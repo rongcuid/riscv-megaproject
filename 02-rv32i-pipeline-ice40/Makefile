@@ -126,7 +126,9 @@ compile_cpu_run: cpu_run_sc.cpp cpu_top.v core_top.v SB_SPRAM256KA.v EBRAM_ROM.v
 run_cpu_top_tb: compile_cpu_top_tb $(TEST_PROGRAMS)
 	./tb_out/cpu_top_tb
 
-clean:
+compliance_clean:
 	cd riscv-compliance && make clean && cd ..
+
+clean:
 	rm -rf tmp tb_out/* obj_dir
 	find . -name "*~" -exec rm -f {} \;
