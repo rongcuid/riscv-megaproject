@@ -21,4 +21,4 @@ module SB_SPRAM256KA
 	dout <= RAM[addr];
       end
    end
-endmodule; // SB_SPRAM256KA
+endmodule // SB_SPRAM256KA
