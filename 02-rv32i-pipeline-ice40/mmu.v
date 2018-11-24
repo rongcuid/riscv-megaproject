@@ -24,8 +24,8 @@ module mmu(
            im_addr, im_do, dm_addr, dm_di, dm_do,
            dm_be, is_signed,
            // To Instruction Memory
-           im_addr_out, im_data,
-           im_addr_out_2, im_data_2,
+           // im_addr_out, im_data,
+           // im_addr_out_2, im_data_2,
            // TO IO
            io_addr, io_en, io_we, io_data_read, io_data_write
            );
@@ -51,15 +51,16 @@ module mmu(
    // DM sign extend or unsigned extend
    input wire 	     is_signed;
    // IM addr out to ROM
-   output wire [13:2] im_addr_out, im_addr_out_2;
+   // wire [13:2] im_addr_out, im_addr_out_2;
    // IM data from ROM, IO data from IO bank
-   input wire [31:0]  im_data, im_data_2, io_data_read;
+   //input wire [31:0]  im_data, im_data_2;
+   input wire [31:0] io_data_read;
    // IO data to IO bank, DM data output
    output reg [31:0]  io_data_write, dm_do;
    // A temporary register for dm_do
    reg [31:0] 	      dm_do_tmp;
    // IM data output
-   output reg [31:0]  im_do;
+   output wire [31:0]  im_do;
    // IO address to IO bank
    output reg [7:0]   io_addr;
    // IO enable, IO write enable
@@ -94,9 +95,9 @@ module mmu(
    reg 			    io_en_tmp, io_we_tmp;
 
    // In this implementaion, the IM ROM address is simply the 13:2 bits of IM address input
-   assign im_addr_out[13:2] = im_addr[13:2];
+   //assign im_addr_out[13:2] = im_addr[13:2];
    // Second port uses DM addr
-   assign im_addr_out_2[13:2] = dm_addr[13:2];
+   //assign im_addr_out_2[13:2] = dm_addr[13:2];
 
    // BRAM bank in interleaved configuration
    SB_SPRAM256KA ram0 (
@@ -112,6 +113,11 @@ module mmu(
                        .din(ram_di[16+:16]), .dout(ram_do[16+:16])
                        );
 
+   EBRAM_ROM rom0(
+     .clk(clk), .addra(im_addr[13:2]), .douta(im_do),
+     .addrb(dm_addr[13:2]), .doutb(im_data_2_p)
+   );
+
    // The MMU pipeline
    always @ (posedge clk, negedge resetb) begin : MMU_PIPELINE
       if (!resetb) begin
@@ -119,9 +125,9 @@ module mmu(
 	 is_signed_p <= 1'bX;
 	 dm_be_p <= 4'b0;
 	 // First instruction is initialized as NOP
-	 im_do <= 32'b0000_0000_0000_00000_000_00000_0010011;
+	 //im_do <= 32'b0000_0000_0000_00000_000_00000_0010011;
 	 io_data_write <= 32'bX;
-	 im_data_2_p <= 32'bX;
+	 //im_data_2_p <= 32'bX;
 	 io_en <= 1'b0;
 	 io_we <= 1'b0;
 	 io_addr <= 8'bX;
@@ -131,8 +137,8 @@ module mmu(
 	 dm_be_p <= dm_be;
 	 chosen_device_p <= chosen_device_tmp[2:0];
 	 is_signed_p <= is_signed;
-	 im_do <= im_data;
-	 im_data_2_p <= im_data_2;
+	 //im_do <= im_data;
+	 //im_data_2_p <= im_data_2;
 	 io_data_write <= io_data_write_tmp;
 	 io_en <= io_en_tmp;
 	 io_we <= io_we_tmp;
