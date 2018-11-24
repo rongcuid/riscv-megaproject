@@ -23,6 +23,8 @@ Communication between simulator and program is done through IO port 0x80000000
 - [X] Implement system timer interrupt
 - [X] For now, increase size of ROM to 15kB
 - [X] Use 16kx16 SPRAM as main memory
-- [ ] Reduce ROM size to 12kB
-- [ ] Make ROM synthesizable
+- [X] Reduce ROM size to 12kB
+- [X] Make ROM synthesizable
+- [ ] Create cpu_top module and its simulator
+- [ ] Make cpu_top synthesizable
 
