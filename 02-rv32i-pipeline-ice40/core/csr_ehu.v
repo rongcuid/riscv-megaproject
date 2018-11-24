@@ -26,7 +26,7 @@ module csr_ehu
    irq_mtimecmp,
    // Data
    src_dst, d_rs1, uimm, FD_aluout, 
-   nextPC, XB_pc[31:2], 
+   nextPC, XB_pc, 
    data_out, csr_mepc, csr_mtvec
    );
 `include "core/csrlist.vh"
