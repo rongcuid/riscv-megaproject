@@ -27,6 +27,7 @@ public:
 
   sc_in<bool> clk_tb;
   sc_signal<bool> resetb_tb;
+  sc_signal<uint32_t> gpio0_tb;
 
   bool test_passes, test_fails, test_halt;
   uint32_t test_result_base_addr;
@@ -37,6 +38,7 @@ public:
     , program(path)
     , clk_tb("clk_tb")
     , resetb_tb("resetb_tb")
+    , gpio0_tb("gpio0_tb")
   {
     SC_CTHREAD(test_thread, clk_tb.pos());
 
@@ -45,6 +47,7 @@ public:
     dut = new Vcpu_top("dut");
     dut->clk(clk_tb);
     dut->resetb(resetb_tb);
+    dut->gpio0(gpio0_tb);
     ROM = dut->cpu_top->CT0->MMU0->rom0->ROM;
     FD_PC = &(dut->cpu_top->CT0->CPU0->FD_PC);
     FD_disasm_opcode = 
@@ -76,8 +79,8 @@ public:
   void initialize_memory() 
   {
     for (int i=0; i<1024; ++i) {
-    dut->cpu_top->CT0->MMU0->ram0->RAM[i] = 0xAAAA;
-    dut->cpu_top->CT0->MMU0->ram1->RAM[i] = 0xAAAA;
+      dut->cpu_top->CT0->MMU0->ram0->RAM[i] = 0xAAAA;
+      dut->cpu_top->CT0->MMU0->ram1->RAM[i] = 0xAAAA;
     }
   }
   void dump_memory();
@@ -85,32 +88,32 @@ public:
 
   void view_snapshot_pc()
   {
-      std::cout << "(TT) Opcode=" << reverse(FD_disasm_opcode)
-		<< ", FD_PC=0x" 
-                << std::hex 
-                << *FD_PC
-		<< std::endl;
+    std::cout << "(TT) Opcode=" << reverse(FD_disasm_opcode)
+	      << ", FD_PC=0x" 
+	      << std::hex 
+	      << *FD_PC
+	      << std::endl;
   }
   void view_snapshot_hex()
   {
-      std::cout << "(TT) Opcode=" << reverse(FD_disasm_opcode)
-		<< ", FD_PC=0x" 
-                << std::hex 
-                << *FD_PC
-		<< ", x1 = 0x" << std::hex
-		<< dut->cpu_top->CT0->CPU0->RF->data[1]
-		<< std::endl;
+    std::cout << "(TT) Opcode=" << reverse(FD_disasm_opcode)
+	      << ", FD_PC=0x" 
+	      << std::hex 
+	      << *FD_PC
+	      << ", x1 = 0x" << std::hex
+	      << dut->cpu_top->CT0->CPU0->RF->data[1]
+	      << std::endl;
   }
 
   void view_snapshot_int()
   {
-      std::cout << "(TT) Opcode=" << reverse(FD_disasm_opcode)
-		<< ", FD_PC=0x" 
-                << std::hex 
-                << *FD_PC
-		<< ", x1 = "
-		<< static_cast<int32_t>(dut->cpu_top->CT0->CPU0->RF->data[1])
-		<< std::endl;
+    std::cout << "(TT) Opcode=" << reverse(FD_disasm_opcode)
+	      << ", FD_PC=0x" 
+	      << std::hex 
+	      << *FD_PC
+	      << ", x1 = "
+	      << static_cast<int32_t>(dut->cpu_top->CT0->CPU0->RF->data[1])
+	      << std::endl;
   }
 
   void poll_io(void);
@@ -148,7 +151,7 @@ public:
   }
 
   void test_thread(void);
-  private:
+private:
   std::string program;
 };
 
@@ -166,21 +169,21 @@ void cpu_run_t::poll_io()
       // IO domain address is 0x0
       if (addr8 == 0) {
         switch (dut->cpu_top->IO0->io_data_write) {
-          case 0:
-            scan_memory_for_base_address();
-            break;
-          case 1:
-            test_passes = true;
-            break;
-          case 2:
-            test_fails = true;
-            break;
-          case 3:
-            test_halt = true;
-            break;
-          default:
-            assert(false && "Invalid testbench command");
-            break;
+	case 0:
+	  scan_memory_for_base_address();
+	  break;
+	case 1:
+	  test_passes = true;
+	  break;
+	case 2:
+	  test_fails = true;
+	  break;
+	case 3:
+	  test_halt = true;
+	  break;
+	default:
+	  assert(false && "Invalid testbench command");
+	  break;
         }
       }
     }
@@ -241,8 +244,8 @@ void cpu_run_t::dump_memory()
       break;
     }
     std::cout << "(DD) " 
-      << std::setfill('0') << std::setw(8)
-      << std::hex << word << std::endl;
+	      << std::setfill('0') << std::setw(8)
+	      << std::hex << word << std::endl;
   }
   f.close();
 }
