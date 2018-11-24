@@ -3,11 +3,11 @@ RISCV_PREFIX ?= riscv32-zephyr-elf-
 CC=$(RISCV_PREFIX)gcc
 AS=$(RISCV_PREFIX)as
 OBJCOPY=$(RISCV_PREFIX)objcopy
-all: run_cpu_top_tb
-#	echo "(MM) Compiling and running all tests"
+
+all: run_compliance
 
 run_compliance: compile_cpu_run
-	cd riscv-compliance && make
+	cd riscv-compliance && make clean && make
 
 #COMPLIANCE_TEST=I-ENDIANESS-01
 #COMPLIANCE_TEST=I-ADD-01
@@ -121,7 +121,7 @@ compile_cpu_top_tb: cpu_top.v cpu_top_sc.cpp core_top.v EBRAM_ROM.v SB_SPRAM256K
 compile_cpu_run: cpu_run_sc.cpp cpu_top.v core_top.v SB_SPRAM256KA.v EBRAM_ROM.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v timer.v
 	echo "(MM) Compiling CPU Simulator"
 	verilator -Wall --sc $^ --top-module cpu_top --exe -o ../tb_out/cpu_run
-	make -C obj_dir -f Vcore_top.mk
+	make -C obj_dir -f Vcpu_top.mk
 
 run_cpu_top_tb: compile_cpu_top_tb $(TEST_PROGRAMS)
 	./tb_out/cpu_top_tb
