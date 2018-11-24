@@ -1,0 +1,3 @@
+set_io clki 31
+set_io resetb 27
+
