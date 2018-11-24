@@ -185,7 +185,7 @@ module core
    end
 
    // Update the Program Counter
-   always @ (posedge clk, negedge resetb) begin : PROGRAM_COUNTER
+   always @ (posedge clk) begin : PROGRAM_COUNTER
       if (!resetb) begin
 	 FD_PC <= 32'hFFFFFFFC;
       end
@@ -300,7 +300,7 @@ module core
    // Flush instructions on exception.
    assign FD_bubble = FD_initiate_exception;
    // The main pipeline
-   always @ (posedge clk, negedge resetb) begin : CORE_PIPELINE
+   always @ (posedge clk) begin : CORE_PIPELINE
       if (!resetb) begin
 	 // Initialize stage registers with side effects
 	 XB_regwrite <= 1'b0;

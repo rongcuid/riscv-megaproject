@@ -119,7 +119,7 @@ module mmu(
    );
 
    // The MMU pipeline
-   always @ (posedge clk, negedge resetb) begin : MMU_PIPELINE
+   always @ (posedge clk) begin : MMU_PIPELINE
       if (!resetb) begin
 	 chosen_device_p <= 3'bX;
 	 is_signed_p <= 1'bX;

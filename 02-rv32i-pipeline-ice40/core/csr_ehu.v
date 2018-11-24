@@ -120,7 +120,7 @@ module csr_ehu
 
    reg [31:0] 	     badaddr_p, nextPC_p;
 
-   always @ (posedge clk, negedge resetb) begin : CSR_PIPELINE
+   always @ (posedge clk) begin : CSR_PIPELINE
       if (!resetb) begin
          mcycle <= 64'b0;
          minstret <= 64'b0;
