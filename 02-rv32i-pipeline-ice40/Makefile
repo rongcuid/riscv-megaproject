@@ -6,6 +6,8 @@ OBJCOPY=$(RISCV_PREFIX)objcopy
 
 all: run_compliance
 
+synthesis: cpu_top.json
+
 run_compliance: compile_cpu_run
 	cd riscv-compliance && make clean && make
 
@@ -113,12 +115,12 @@ TEST_PROGRAMS+=tb_out/13-csr.bin
 TEST_PROGRAMS+=tb_out/14-mem.bin
 TEST_PROGRAMS+=tb_out/15-exception.bin
 
-compile_cpu_top_tb: cpu_top.v cpu_top_sc.cpp core_top.v EBRAM_ROM.v SB_SPRAM256KA.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v io_port.v
+compile_cpu_top_tb: cpu_top.v cpu_top_sc.cpp core_top.v EBRAM_ROM.v SPRAM_16Kx16.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v io_port.v
 	echo "(MM) Compiling CPU Top testbench"
 	verilator -Wall --top-module cpu_top --sc $^ --exe -o ../tb_out/cpu_top_tb
 	make -C obj_dir -f Vcpu_top.mk
 
-compile_cpu_run: cpu_run_sc.cpp cpu_top.v core_top.v SB_SPRAM256KA.v EBRAM_ROM.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v timer.v
+compile_cpu_run: cpu_run_sc.cpp cpu_top.v core_top.v SPRAM_16Kx16.v EBRAM_ROM.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v timer.v
 	echo "(MM) Compiling CPU Simulator"
 	verilator -Wall --sc $^ --top-module cpu_top --exe -o ../tb_out/cpu_run
 	make -C obj_dir -f Vcpu_top.mk
@@ -126,9 +128,15 @@ compile_cpu_run: cpu_run_sc.cpp cpu_top.v core_top.v SB_SPRAM256KA.v EBRAM_ROM.v
 run_cpu_top_tb: compile_cpu_top_tb $(TEST_PROGRAMS)
 	./tb_out/cpu_top_tb
 
+cpu_top.json: SPRAM_16Kx16.v EBRAM_ROM.v core.v core_top.v cpu_top.v mmu.v regfile.v timer.v io_port.v core/csr_ehu.v core/instruction_decoder.v cpu_top.ys
+	yosys $^
+ 
 compliance_clean:
 	cd riscv-compliance && make clean && cd ..
 
 clean:
 	rm -rf tmp tb_out/* obj_dir
+	rm -f cpu_top.json
+	rm -f cpu_top.asc
+	rm -f cpu_top.blif
 	find . -name "*~" -exec rm -f {} \;

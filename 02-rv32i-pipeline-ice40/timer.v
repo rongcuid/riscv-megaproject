@@ -21,7 +21,7 @@ module timer(
     reg [63:0] mtime;
     reg [63:0] mtimecmp;
 
-    always @ (posedge clk, negedge resetb) begin : TIMER_PIPELINE
+    always @ (posedge clk) begin : TIMER_PIPELINE
       if (!resetb) begin
         mtime <= 64'b0;
         // mtimecmp <= 64'hFFFFFFFFFFFFFFFF;
@@ -51,8 +51,8 @@ module timer(
 end
 
 assign io_dout = 
-  io_addr_3_2[1]
-  ? ( io_addr_3_2[0] ? mtimecmp[32+:32] : mtimecmp[0+:32] )
-  : ( io_addr_3_2[0] ? mtime[32+:32] : mtime[0+:32] );
+  io_addr_3_2[3]
+  ? ( io_addr_3_2[2] ? mtimecmp[32+:32] : mtimecmp[0+:32] )
+  : ( io_addr_3_2[2] ? mtime[32+:32] : mtime[0+:32] );
 
   endmodule

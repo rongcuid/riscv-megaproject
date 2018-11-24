@@ -100,13 +100,13 @@ module mmu(
    //assign im_addr_out_2[13:2] = dm_addr[13:2];
 
    // BRAM bank in interleaved configuration
-   SB_SPRAM256KA ram0 (
+   SPRAM_16Kx16 ram0 (
                        .clk(clk), .wren(ram_we), 
 		       .maskwren({{2{dm_be[1]}},{2{dm_be[0]}}}), 
                        .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
                        .din(ram_di[0+:16]), .dout(ram_do[0+:16])
                        );
-   SB_SPRAM256KA ram1 (
+   SPRAM_16Kx16 ram1 (
                        .clk(clk), .wren(ram_we), 
 		       .maskwren({{2{dm_be[3]}},{2{dm_be[2]}}}), 
                        .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
@@ -119,7 +119,7 @@ module mmu(
    );
 
    // The MMU pipeline
-   always @ (posedge clk, negedge resetb) begin : MMU_PIPELINE
+   always @ (posedge clk) begin : MMU_PIPELINE
       if (!resetb) begin
 	 chosen_device_p <= 3'bX;
 	 is_signed_p <= 1'bX;

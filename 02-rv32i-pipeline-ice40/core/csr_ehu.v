@@ -26,7 +26,7 @@ module csr_ehu
    irq_mtimecmp,
    // Data
    src_dst, d_rs1, uimm, FD_aluout, 
-   nextPC, XB_pc[31:2], 
+   nextPC, XB_pc, 
    data_out, csr_mepc, csr_mtvec
    );
 `include "core/csrlist.vh"
@@ -120,7 +120,7 @@ module csr_ehu
 
    reg [31:0] 	     badaddr_p, nextPC_p;
 
-   always @ (posedge clk, negedge resetb) begin : CSR_PIPELINE
+   always @ (posedge clk) begin : CSR_PIPELINE
       if (!resetb) begin
          mcycle <= 64'b0;
          minstret <= 64'b0;
