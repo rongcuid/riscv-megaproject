@@ -8,7 +8,7 @@
 module instruction_decoder
   (
    // Inputs
-   FD_bubble, inst, aluout_1_0,
+   FD_reset, inst, aluout_1_0,
    // Outputs
    immediate,
    alu_is_signed, aluop1_sel, aluop2_sel, alu_op,
@@ -31,7 +31,7 @@ module instruction_decoder
 `include "core/aluop.vh"
 `include "core/opcode.vh"
    // The instruction to be decoded
-   input wire FD_bubble;
+   input wire FD_reset;
    input wire [31:0] inst;
    input wire [1:0] aluout_1_0;
    // Immediate value
@@ -187,7 +187,7 @@ module instruction_decoder
       exception_ecall = 1'b0;
       exception_ebreak = 1'b0;
       // Decoding opcode. Read the RISC-V Spec Vol 1.
-      if (!FD_bubble) begin
+      if (!FD_reset) begin
         case (opcode[6:2])
           `OP_IMM: begin
             // Immediate operation

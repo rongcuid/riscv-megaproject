@@ -124,7 +124,7 @@ module core
 
    instruction_decoder inst_dec
    (
-     .FD_bubble(FD_bubble),
+     .FD_reset(FD_reset),
      .inst(im_do), .aluout_1_0(FD_aluout[1:0]),
      .immediate(FD_imm),
      .alu_is_signed(FD_alu_is_signed),
@@ -300,8 +300,8 @@ module core
    assign dm_addr = FD_aluout;
    assign dm_di = FD_d_rs2;
 
-   // Flush instructions on exception. Reset instruction is invalid
-   assign FD_bubble = FD_reset | FD_initiate_exception;
+   // Flush instructions on exception.
+   assign FD_bubble = FD_initiate_exception;
    // The main pipeline
    always @ (posedge clk, negedge resetb) begin : CORE_PIPELINE
       if (!resetb) begin
