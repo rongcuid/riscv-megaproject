@@ -11,7 +11,7 @@ module EBRAM_ROM(
      WIDTH = 32;
    
    input wire clk;
-   input reg [DEPTH_LOG-1:0] addra, addrb;
+   input wire [DEPTH_LOG-1:0] addra, addrb;
    output reg [WIDTH-1:0] 	 douta, doutb;
 
    reg [WIDTH-1:0] 	 ROM [DEPTH-1:0] /*verilator public*/;
