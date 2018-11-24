@@ -14,8 +14,6 @@
 #include "Vcpu_top_regfile.h"
 #include "Vcpu_top_EBRAM_ROM.h"
 
-std::string bv_to_opcode(const sc_bv<256>& bv);
-
 //////////////////////////////////////////////////
 
 class cpu_top_tb_t : public sc_module
@@ -160,16 +158,6 @@ public:
   void test15(void);
 };
 
-std::string bv_to_opcode(const sc_bv<256>& bv)
-{
-  char buf[32];
-  for (int i=0; i<31; ++i) {
-    buf[i] = bv.range(i*8+7, i*8).to_uint();
-  }
-  std::string op(buf);
-  std::reverse(op.begin(), op.end());
-  return op;
-}
 
 void cpu_top_tb_t::test0()
 {

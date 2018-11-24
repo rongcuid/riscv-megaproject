@@ -3,11 +3,11 @@ module io_port
   input wire clk,
   input wire resetb,
   /* verilator lint_off UNUSED */
-  input wire [7:0] io_addr,
-  input wire io_en,
+  input wire [7:0] io_addr/*verilator public*/,
+  input wire io_en/*verilator public*/,
   /* verilator lint_on UNUSED */
-  input wire io_we,
-  input wire [31:0] io_data_write,
+  input wire io_we/*verilator public*/,
+  input wire [31:0] io_data_write/*verilator public*/,
   output wire [31:0] io_data_read,
   output wire irq_mtimecmp
 );
