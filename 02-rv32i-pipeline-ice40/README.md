@@ -56,7 +56,6 @@ To run subarch test, run:
 
 ```
 $ make run_cpu_top_tb
-
 ```
 
 # Architecture
