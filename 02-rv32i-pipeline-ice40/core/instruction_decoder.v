@@ -474,76 +474,76 @@ end
    end
 
    /* verilator lint_off UNUSED */
-   reg [255:0] disasm_opcode /*verilator public*/;
+   // reg [255:0] disasm_opcode /*verilator public*/;
 
-   always @ (*) begin : DISASM
-      case (opcode[6:2])
-	`LOAD: disasm_opcode = "LOAD    ";
-	`OP_IMM: begin
-	   case (funct3)
-	     3'b000: disasm_opcode = "ADDI    ";
-	     3'b001: disasm_opcode = "SLLI    ";
-	     3'b010: disasm_opcode = "SLTI    ";
-	     3'b011: disasm_opcode = "SLTIU   ";
-	     3'b100: disasm_opcode = "XORI    ";
-	     3'b101: disasm_opcode = funct7[5] 
-					? "SRAI    " : "SRLI    ";
-	     3'b110: disasm_opcode = "ORI     ";
-	     3'b111: disasm_opcode = "ANDI    ";
-	     default: disasm_opcode = "OP-IMM  ";
-	   endcase
-	end
-	`AUIPC: disasm_opcode = "AUIPC   ";
-	`STORE: disasm_opcode = "STORE   ";
-	`OP: begin
-	   case (funct3)
-	     3'b000: disasm_opcode = funct7[5] 
-					? "SUB     " : "ADD     ";
-	     3'b001: disasm_opcode = "SLL     ";
-	     3'b010: disasm_opcode = "SLT     ";
-	     3'b011: disasm_opcode = "SLTU    ";
-	     3'b100: disasm_opcode = "XOR     ";
-	     3'b101: disasm_opcode = funct7[5] 
-					? "SRA     " : "SRL     ";
-	     3'b110: disasm_opcode = "OR      ";
-	     3'b111: disasm_opcode = "AND     ";
-	     default: 	   disasm_opcode = "OP?     ";
-	   endcase
-	end
-	`LUI:  disasm_opcode = "LUI     ";
-	`BRANCH: begin
-	   case (funct3)
-	     3'b000: disasm_opcode = "BEQ     ";
-	     3'b001: disasm_opcode = "BNE     ";
-	     3'b100: disasm_opcode = "BLT     ";
-	     3'b101: disasm_opcode = "BGE     ";
-	     3'b110: disasm_opcode = "BLTU    ";
-	     3'b111: disasm_opcode = "BGEU    ";
-	     default: disasm_opcode = "BRANCH  ";
-	   endcase
-	end
-	`JALR: disasm_opcode = "JALR    ";
-	`JAL: disasm_opcode = "JAL     ";
-	`SYSTEM: begin 
-	   case (funct3)
-	     3'b000: begin
-		if (funct7==7'b0011000 &&
-		    a_rs2 == 5'b00010 &&
-		    a_rs1 == 5'b00000)
-		  disasm_opcode = "MRET    ";
-		else
-		  disasm_opcode = "SYSTEM  ";
-	     end
-	     3'b001: disasm_opcode = "CSRRW   ";
-	     3'b010: disasm_opcode = "CSRRS   ";
-	     3'b011: disasm_opcode = "CSRRC   ";
-	     3'b101: disasm_opcode = "CSRRWI  ";
-	     3'b110: disasm_opcode = "CSRRSI  ";
-	     3'b111: disasm_opcode = "CSRRCI  ";
-	     default: disasm_opcode = "SYSTEM  ";
-	   endcase
-	end
-	default: disasm_opcode = "ILLEGAL ";
-      endcase
-   end
+   // always @ (*) begin : DISASM
+   //    case (opcode[6:2])
+   // 	`LOAD: disasm_opcode = "LOAD    ";
+   // 	`OP_IMM: begin
+   // 	   case (funct3)
+   // 	     3'b000: disasm_opcode = "ADDI    ";
+   // 	     3'b001: disasm_opcode = "SLLI    ";
+   // 	     3'b010: disasm_opcode = "SLTI    ";
+   // 	     3'b011: disasm_opcode = "SLTIU   ";
+   // 	     3'b100: disasm_opcode = "XORI    ";
+   // 	     3'b101: disasm_opcode = funct7[5] 
+   // 					? "SRAI    " : "SRLI    ";
+   // 	     3'b110: disasm_opcode = "ORI     ";
+   // 	     3'b111: disasm_opcode = "ANDI    ";
+   // 	     default: disasm_opcode = "OP-IMM  ";
+   // 	   endcase
+   // 	end
+   // 	`AUIPC: disasm_opcode = "AUIPC   ";
+   // 	`STORE: disasm_opcode = "STORE   ";
+   // 	`OP: begin
+   // 	   case (funct3)
+   // 	     3'b000: disasm_opcode = funct7[5] 
+   // 					? "SUB     " : "ADD     ";
+   // 	     3'b001: disasm_opcode = "SLL     ";
+   // 	     3'b010: disasm_opcode = "SLT     ";
+   // 	     3'b011: disasm_opcode = "SLTU    ";
+   // 	     3'b100: disasm_opcode = "XOR     ";
+   // 	     3'b101: disasm_opcode = funct7[5] 
+   // 					? "SRA     " : "SRL     ";
+   // 	     3'b110: disasm_opcode = "OR      ";
+   // 	     3'b111: disasm_opcode = "AND     ";
+   // 	     default: 	   disasm_opcode = "OP?     ";
+   // 	   endcase
+   // 	end
+   // 	`LUI:  disasm_opcode = "LUI     ";
+   // 	`BRANCH: begin
+   // 	   case (funct3)
+   // 	     3'b000: disasm_opcode = "BEQ     ";
+   // 	     3'b001: disasm_opcode = "BNE     ";
+   // 	     3'b100: disasm_opcode = "BLT     ";
+   // 	     3'b101: disasm_opcode = "BGE     ";
+   // 	     3'b110: disasm_opcode = "BLTU    ";
+   // 	     3'b111: disasm_opcode = "BGEU    ";
+   // 	     default: disasm_opcode = "BRANCH  ";
+   // 	   endcase
+   // 	end
+   // 	`JALR: disasm_opcode = "JALR    ";
+   // 	`JAL: disasm_opcode = "JAL     ";
+   // 	`SYSTEM: begin 
+   // 	   case (funct3)
+   // 	     3'b000: begin
+   // 		if (funct7==7'b0011000 &&
+   // 		    a_rs2 == 5'b00010 &&
+   // 		    a_rs1 == 5'b00000)
+   // 		  disasm_opcode = "MRET    ";
+   // 		else
+   // 		  disasm_opcode = "SYSTEM  ";
+   // 	     end
+   // 	     3'b001: disasm_opcode = "CSRRW   ";
+   // 	     3'b010: disasm_opcode = "CSRRS   ";
+   // 	     3'b011: disasm_opcode = "CSRRC   ";
+   // 	     3'b101: disasm_opcode = "CSRRWI  ";
+   // 	     3'b110: disasm_opcode = "CSRRSI  ";
+   // 	     3'b111: disasm_opcode = "CSRRCI  ";
+   // 	     default: disasm_opcode = "SYSTEM  ";
+   // 	   endcase
+   // 	end
+   // 	default: disasm_opcode = "ILLEGAL ";
+   //    endcase
+   // end
 endmodule // instruction_decoder

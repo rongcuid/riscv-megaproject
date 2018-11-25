@@ -28,3 +28,7 @@ Communication between simulator and program is done through IO port 0x80000000
 - [X] Create cpu_top module and its simulator
 - [ ] Make cpu_top synthesizable
 
+** Synthesizable
+- [X] Refactor disassembly
+- [ ] Unified RAM
+- [ ] Register File
