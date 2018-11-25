@@ -8,7 +8,7 @@ all: run_compliance
 
 synthesis: board_top.json
 
-run_compliance: compile_cpu_run
+run_compliance: tb_out/cpu_run
 	cd riscv-compliance && make clean && make
 
 #COMPLIANCE_TEST=I-ENDIANESS-01
@@ -120,7 +120,7 @@ compile_cpu_top_tb: cpu_top.v cpu_top_sc.cpp core_top.v EBRAM_ROM.v SPRAM_16Kx16
 	verilator -Wall --top-module cpu_top --sc $^ --exe -o ../tb_out/cpu_top_tb
 	make -C obj_dir -f Vcpu_top.mk
 
-compile_cpu_run: cpu_run_sc.cpp cpu_top.v core_top.v SPRAM_16Kx16.v EBRAM_ROM.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v timer.v
+tb_out/cpu_run: cpu_run_sc.cpp cpu_top.v core_top.v SPRAM_16Kx16.v EBRAM_ROM.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v timer.v
 	echo "(MM) Compiling CPU Simulator"
 	verilator -Wall --sc $^ --top-module cpu_top --exe -o ../tb_out/cpu_run
 	make -C obj_dir -f Vcpu_top.mk
