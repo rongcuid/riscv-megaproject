@@ -12,6 +12,7 @@
 #include "Vcpu_top_core_top.h"
 #include "Vcpu_top_core.h"
 #include "Vcpu_top_regfile.h"
+#include "Vcpu_top_mmu.h"
 #include "Vcpu_top_EBRAM_SPROM.h"
 #include "Vcpu_top_SPRAM_16Kx16.h"
 
@@ -77,6 +78,14 @@ public:
     return word;
   }
 
+  uint32_t get_im_word(uint32_t i) 
+  {
+    uint32_t word = 0;
+    word |= dut->cpu_top->ram00->RAM[i];
+    word |= dut->cpu_top->ram01->RAM[i] << 16;
+    return word;
+  }
+  
   void initialize_memory() 
   {
     for (int i=0; i<1024; ++i) {
@@ -95,6 +104,8 @@ public:
 	      << ", FD_PC=0x" 
 	      << std::hex 
 	      << *FD_PC
+	      << ", nextPC=0x"
+	      << dut->cpu_top->CT0->CPU0->nextPC
 	      << std::endl;
   }
   void view_snapshot_hex()
@@ -105,6 +116,8 @@ public:
 	      << *FD_PC
 	      << ", x1 = 0x" << std::hex
 	      << dut->cpu_top->CT0->CPU0->RF->data[1]
+	      << ", nextPC=0x"
+	      << dut->cpu_top->CT0->CPU0->nextPC
 	      << std::endl;
   }
 
@@ -116,6 +129,8 @@ public:
 	      << *FD_PC
 	      << ", x1 = "
 	      << static_cast<int32_t>(dut->cpu_top->CT0->CPU0->RF->data[1])
+	      << ", nextPC=0x"
+	      << dut->cpu_top->CT0->CPU0->nextPC
 	      << std::endl;
   }
 
@@ -280,6 +295,57 @@ void cpu_run_t::test_thread()
   for (int i=0; i<4096; ++i) {
     poll_io();
     view_snapshot_hex();
+    while(dut->cpu_top->CT0->CPU0->fence_i) {
+      // std::cout
+      // 	<< "(TT) fence_pointer=0x" << std::hex
+      // 	<< dut->cpu_top->CT0->MMU0->fence_pointer
+      // 	<< std::endl;
+      if (dut->cpu_top->CT0->CPU0->fence_i_done) {
+	for (int i=0; i<0x45; ++i) {
+	  printf("(TT) ram0[%d]=0x%x, ram1[%d]=0x%x\n",
+		 i, get_memory_word(i), i, get_im_word(i));
+	}
+	std::cout << "(TT) nextPC=0x" << dut->cpu_top->CT0->CPU0->nextPC
+		  << ", fence_i=" << (int)dut->cpu_top->CT0->CPU0->fence_i
+		  << ", bubble=" << (int)dut->cpu_top->CT0->CPU0->FD_bubble
+		  << std::endl;
+	std::cout << "(TT) im_do=0x"
+		  << std::hex << dut->cpu_top->CT0->CPU0->im_do
+		  << " im_addr=0x"
+		  << dut->cpu_top->CT0->CPU0->im_addr
+		  << " ram0_addr=0x"
+		  << (dut->cpu_top->CT0->MMU0->ram0_addr << 2)
+		  << " ram0_do=0x"
+		  << (dut->cpu_top->CT0->MMU0->ram0_do)
+		  << " ram0_do=0x"
+		  << (dut->cpu_top->CT0->ram0_do)
+		  << " mmu_ram0_do=0x"
+		  << (dut->cpu_top->mmu_ram0_do << 2)
+		  << " ram00_addr=0x"
+		  << (dut->cpu_top->ram00_addr << 2)
+		  << std::endl;
+	wait();
+	std::cout << "(TT) im_do=0x"
+		  << std::hex << dut->cpu_top->CT0->CPU0->im_do
+		  << " im_addr=0x"
+		  << dut->cpu_top->CT0->CPU0->im_addr
+		  << " ram0_addr=0x"
+		  << (dut->cpu_top->CT0->MMU0->ram0_addr << 2)
+		  << " ram0_do=0x"
+		  << (dut->cpu_top->CT0->MMU0->ram0_do)
+		  << " ram0_do=0x"
+		  << (dut->cpu_top->CT0->ram0_do)
+		  << " mmu_ram0_do=0x"
+		  << (dut->cpu_top->mmu_ram0_do << 2)
+		  << " ram00_addr=0x"
+		  << (dut->cpu_top->ram00_addr << 2)
+		  << std::endl;
+	wait();wait();
+	view_snapshot_hex();
+	exit(1);
+      }
+      wait();
+    }
     if (test_passes) {
       std::cout << "A test passes!" << std::endl;
     }

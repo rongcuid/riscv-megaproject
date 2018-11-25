@@ -36,7 +36,7 @@ module core
    // Interface to MMU
    input wire [31:0] im_do/*verilator public*/, dm_do;
    output 	     dm_we, dm_is_signed;
-   output [31:0]     im_addr, dm_addr, dm_di;
+   output [31:0]     im_addr/*verilator public*/, dm_addr, dm_di;
    output [3:0]      dm_be;
 
    wire 	     dm_we, dm_is_signed;
@@ -99,7 +99,7 @@ module core
    reg 	       XB_FD_exception_load_misaligned;
    reg 	       XB_FD_exception_store_misaligned;
    reg [31:0]  XB_PC;
-   wire        FD_bubble;
+   wire        FD_bubble/*verilator public*/;
    reg FD_reset;
    reg 	       XB_bubble;
 
@@ -113,8 +113,8 @@ module core
    reg 	       XB_csr_writeback;
 
    // FENCE.I instruction
-   output wire        fence_i;
-   input wire 	      fence_i_done;
+   output wire        fence_i/*verilator public*/;
+   input wire 	      fence_i_done/*verilator public*/;
    
    assign dm_be = FD_bubble ? 4'b0 : FD_dm_be;
    assign dm_we = (FD_exception_store_misaligned | FD_bubble) ?
@@ -176,7 +176,7 @@ module core
       // Illegal Instruction Exception, Misaligned Exception, MRET,
       // Branch, Jump, Jump Register, Increment
       nextPC =
-	      (!boot | (fence_i && !fence_i_done)) ? FD_PC
+	      (!boot | (fence_i & ~fence_i_done)) ? FD_PC
 	      : (FD_initiate_exception) ? CSR_mtvec
 	      : (FD_pc_update & FD_pc_mepc) ? CSR_mepc
 	      : (do_branch) ? FD_imm + FD_PC
@@ -300,12 +300,15 @@ module core
    assign dm_addr = FD_aluout;
    assign dm_di = FD_d_rs2;
 
+   reg fence_i_done_p;
+   
    // Instruction is invalid on boot
    // Flush instructions on exception.
-   assign FD_bubble = !boot | (fence_i & !fence_i_done) | FD_initiate_exception;
+   assign FD_bubble = !boot | (fence_i & !(fence_i_done | fence_i_done_p)) | FD_initiate_exception;
    // The main pipeline
    always @ (posedge clk) begin : CORE_PIPELINE
       if (!resetb) begin
+	 fence_i_done_p <= 1'b0;
 	 // Initialize stage registers with side effects
 	 XB_regwrite <= 1'b0;
 	 XB_csr_writeback <= 1'b0;
@@ -332,6 +335,7 @@ module core
       end
       else if (clk) begin
          FD_reset <= !boot;
+	 fence_i_done_p <= fence_i_done;
 	 // XB stage
 	 //// Operators
 	 if (!FD_link) begin

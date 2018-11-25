@@ -8,7 +8,7 @@ module core_top
    input wire 	      boot,
    
    output wire [15:2] ram0_addr,
-   input wire [31:0]  ram0_do,
+   input wire [31:0]  ram0_do/*verilator public*/,
    output wire [31:0]  ram0_di,
    output wire 	      ram0_we,
    output wire [15:2] ram1_addr,

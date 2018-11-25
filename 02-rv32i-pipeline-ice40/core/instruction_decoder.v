@@ -389,7 +389,7 @@ module instruction_decoder
       end
       `MISC_MEM: begin
         // NOP since this core is in order commit
-	 if (funct3 == 3'b000) begin : FENCE_I
+	 if (funct3 == 3'b001) begin : FENCE_I
 	    fence_i = 1'b1;
 	 end
       end

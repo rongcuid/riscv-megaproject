@@ -68,6 +68,11 @@ inline std::string disasm(uint32_t instruction) {
     case 0b110: return "CSRRSI  ";
     case 0b111: return "SYSTEM  ";
     }
+  case 0b00011:
+    switch (funct3) {
+    case 0b001: return "FENCE.I ";
+    default: return "MISC-MEM";
+    }
   default: return "ILLEGAL ";
   }
 }

@@ -15,7 +15,7 @@ module cpu_top
    wire        irq_mtimecmp;
 
    wire [15:2] mmu_ram0_addr, mmu_ram1_addr;
-   wire [31:0] mmu_ram0_do, mmu_ram1_do, mmu_ram0_di, mmu_ram1_di;
+   wire [31:0] mmu_ram0_do/*verilator public*/, mmu_ram1_do, mmu_ram0_di, mmu_ram1_di;
    wire        mmu_ram0_we, mmu_ram1_we;
    wire [3:0]  mmu_dm_be;
 
@@ -26,7 +26,7 @@ module cpu_top
    wire        ram00_we, ram01_we, ram10_we, ram11_we;
    wire [3:0]  ram00_be, ram01_be, ram10_be, ram11_be;
    wire [15:0] ram00_di, ram01_di, ram10_di, ram11_di;
-   wire [13:0] ram00_addr, ram01_addr, ram10_addr, ram11_addr;
+   wire [13:0] ram00_addr/*verilator public*/, ram01_addr, ram10_addr, ram11_addr;
    
    core_top CT0 
      (
@@ -54,25 +54,25 @@ module cpu_top
                        .clk(clk), .wren(ram00_we), 
 		       .maskwren(ram00_be), 
                        .addr(ram00_addr),
-                       .din(ram00_di), .dout(mmu_ram0_do[0+:16])
+                       .din(ram00_di), .dout(mmu_ram0_do[15:0])
                        );
    SPRAM_16Kx16 ram01 (
                        .clk(clk), .wren(ram01_we), 
 		       .maskwren(ram01_be), 
                        .addr(ram01_addr),
-                       .din(ram01_di), .dout(mmu_ram0_do[16+:16])
+                       .din(ram01_di), .dout(mmu_ram0_do[31:16])
                        );
    SPRAM_16Kx16 ram10 (
                        .clk(clk), .wren(ram10_we), 
 		       .maskwren(ram10_be), 
                        .addr(ram10_addr),
-                       .din(ram10_di), .dout(mmu_ram1_do[0+:16])
+                       .din(ram10_di), .dout(mmu_ram1_do[15:0])
                        );
    SPRAM_16Kx16 ram11 (
                        .clk(clk), .wren(ram11_we), 
 		       .maskwren(ram11_be), 
                        .addr(ram11_addr),
-                       .din(ram11_di), .dout(mmu_ram1_do[16+:16])
+                       .din(ram11_di), .dout(mmu_ram1_do[31:16])
                        );
 
    wire [8:0]  next_rom_pointer;
