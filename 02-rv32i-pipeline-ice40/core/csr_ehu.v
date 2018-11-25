@@ -16,7 +16,6 @@ module csr_ehu
    read, write, set, clear, imm, a_rd,
    initiate_exception,
    // Exception In
-   XB_FD_exception_unsupported_category,
    XB_FD_exception_illegal_instruction,
    XB_FD_exception_ecall,
    XB_FD_exception_ebreak,
@@ -39,7 +38,6 @@ module csr_ehu
    input wire [31:2] XB_pc;
    input wire [31:0] d_rs1, FD_aluout, nextPC;
    input wire [4:0]  uimm;
-   input wire	     XB_FD_exception_unsupported_category;
    input wire	     XB_FD_exception_illegal_instruction;
    input wire	     XB_FD_exception_ecall;
    input wire	     XB_FD_exception_ebreak;
@@ -82,8 +80,7 @@ module csr_ehu
         = ~XB_bubble & XB_FD_exception_ebreak;
       initiate_illinst
         = ~XB_bubble & (XB_exception_illegal_instruction |
-			XB_FD_exception_illegal_instruction |
-			XB_FD_exception_unsupported_category);
+			XB_FD_exception_illegal_instruction);
       initiate_misaligned
         = ~XB_bubble & (XB_FD_exception_instruction_misaligned |
 			XB_FD_exception_load_misaligned |
@@ -96,8 +93,7 @@ module csr_ehu
    end
 
    // There exists an exception from FD stage
-   assign FD_exception = XB_FD_exception_unsupported_category |
-			 XB_FD_exception_illegal_instruction |
+   assign FD_exception = XB_FD_exception_illegal_instruction |
 			 XB_FD_exception_ecall |
 			 XB_FD_exception_ebreak |
 			 XB_FD_exception_instruction_misaligned |
@@ -120,6 +116,7 @@ module csr_ehu
 
    reg [31:0] 	     badaddr_p, nextPC_p;
 
+   /* verilator lint_off BLKSEQ */
    always @ (posedge clk) begin : CSR_PIPELINE
       if (!resetb) begin
          mcycle <= 64'b0;
@@ -136,7 +133,6 @@ module csr_ehu
 	 irq_mtimecmp_p <= 1'b0;
       end
       else if (clk) begin
-         /* verilator lint_off BLKSEQ */
          XB_exception_illegal_instruction = 1'b0;
          mcycle <= mcycle + 64'b1;
          // On trap, mpie is updated
@@ -289,8 +285,7 @@ module csr_ehu
                mcause <= 32'd0;
                mtval <= nextPC_p;
             end
-            else if (XB_FD_exception_illegal_instruction |
-		     XB_FD_exception_unsupported_category) begin
+            else if (XB_FD_exception_illegal_instruction) begin
                mcause <= 32'd2;
                mtval <= 32'b0;
             end
@@ -309,8 +304,7 @@ module csr_ehu
                mcause <= 32'd11;
             end
          end // if (FD_exception)
-         /* verilator lint_on BLKSEQ */
       end // if (clk)
    end // block: CSR_PIPELINE
-
+   /* verilator lint_on BLKSEQ */
 endmodule // csrrf

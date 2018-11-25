@@ -19,7 +19,6 @@ module instruction_decoder
    a_rs1, a_rs2, a_rd, funct3, funct7,
    // Exceptions
    // bug_invalid_instr_format_onehot,
-   exception_unsupported_category,
    exception_illegal_instruction,
    exception_load_misaligned,
    exception_store_misaligned,
@@ -63,7 +62,6 @@ module instruction_decoder
    // This shall be refactored to assert()
    // output 	     bug_invalid_instr_format_onehot;
    // Exceptions to be raised
-   output 	     exception_unsupported_category;
    output 	     exception_illegal_instruction;
    output 	     exception_load_misaligned;
    output 	     exception_store_misaligned;
@@ -142,7 +140,6 @@ module instruction_decoder
    reg 	      csr_read, csr_write, csr_set, csr_clear, csr_imm;
    
    reg [4:0]  a_rs1, a_rs2, a_rd;
-   reg 	      exception_unsupported_category;
    reg 	      exception_illegal_instruction;
    reg 	      exception_load_misaligned;
    reg 	      exception_store_misaligned;
@@ -179,7 +176,6 @@ module instruction_decoder
       csr_clear = 1'b0;
       csr_imm = 1'b0;
       // Default no exception
-      exception_unsupported_category = 1'b0;
       exception_illegal_instruction = 1'b0;
       exception_load_misaligned = 1'b0;
       exception_store_misaligned = 1'b0;
@@ -454,13 +450,13 @@ module instruction_decoder
     end
 
     default: begin
-      exception_unsupported_category = 1'b1;
+      exception_illegal_instruction = 1'b1;
     end
   endcase // case (opcode[6:2])
 end 
+      /* verilator lint_on CASEOVERLAP */
 
-      if (exception_unsupported_category
-	  | exception_illegal_instruction
+      if (  exception_illegal_instruction
 	  | exception_load_misaligned
 	  | exception_store_misaligned) begin
 	 regwrite = 1'b0;
@@ -473,7 +469,6 @@ end
       // 	exception_unsupported_category = 1'b1;
    end
 
-   /* verilator lint_off UNUSED */
    // reg [255:0] disasm_opcode /*verilator public*/;
 
    // always @ (*) begin : DISASM
