@@ -10,4 +10,4 @@
 ## implement memories (arrays)
 #memory; opt
 
-synth_ice40 -top cpu_top -blif cpu_top.blif
+synth_ice40 -top cpu_top -json cpu_top.json

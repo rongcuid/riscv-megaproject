@@ -23,7 +23,10 @@ module io_port
    // GPIO0 is at 0x80000000, the same address as testbench commands.
    // However, it only uses the lowest byte
    always @ (posedge clk) begin : GPIO0
-      if (clk) begin
+      if (!resetb) begin
+	 gpio0 <= 8'b0;
+      end
+      else if (clk) begin
 	 if (io_addr[7:2] == 6'b0 && io_we) begin
 	    gpio0 <= io_data_write[7:0];
 	 end

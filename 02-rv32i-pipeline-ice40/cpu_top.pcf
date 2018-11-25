@@ -1,3 +1,13 @@
 set_io clki 31
 set_io resetb 27
 
+set_io gpio0[0] 47
+set_io gpio0[1] 45
+set_io gpio0[2] 48
+set_io gpio0[3] 3
+set_io gpio0[4] 4
+set_io gpio0[5] 44
+set_io gpio0[6] 6
+set_io gpio0[7] 9
+
+
