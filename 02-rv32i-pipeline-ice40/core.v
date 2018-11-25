@@ -61,9 +61,7 @@ module core
    wire [2:0] 	     FD_funct3;
    /* verilator lint_off UNUSED */
    wire [6:0] 	     FD_funct7;
-   wire 	     FD_bug_invalid_instr_format_onehot;
    /* verilator lint_on UNUSED */   
-   wire 	     FD_exception_unsupported_category;
    wire 	     FD_exception_illegal_instruction;
    wire 	     FD_exception_ecall;
    wire 	     FD_exception_ebreak;
@@ -93,7 +91,6 @@ module core
    reg 	       XB_memtoreg;
    reg 	       XB_alu_is_signed;
    reg [31:0]  XB_aluop1_sel, XB_aluop2_sel, XB_alu_op;
-   reg 	       XB_FD_exception_unsupported_category;
    reg 	       XB_FD_exception_illegal_instruction;
    reg 	       XB_FD_exception_ecall;
    reg 	       XB_FD_exception_ebreak;
@@ -136,7 +133,6 @@ module core
      .csr_set(FD_csr_set), .csr_clear(FD_csr_clear), .csr_imm(FD_csr_imm),
      .a_rs1(FD_a_rs1), .a_rs2(FD_a_rs2), .a_rd(FD_a_rd), 
      .funct3(FD_funct3), .funct7(FD_funct7),
-     .exception_unsupported_category(FD_exception_unsupported_category),
      .exception_illegal_instruction(FD_exception_illegal_instruction),
      .exception_ecall(FD_exception_ecall),
      .exception_ebreak(FD_exception_ebreak),
@@ -270,7 +266,6 @@ module core
       .set(XB_csr_set), .clear(XB_csr_clear),
       .imm(XB_csr_imm), .a_rd(FD_a_rd),
       .initiate_exception(FD_initiate_exception),
-      .XB_FD_exception_unsupported_category(XB_FD_exception_unsupported_category),
       .XB_FD_exception_illegal_instruction(XB_FD_exception_illegal_instruction),
       .XB_FD_exception_instruction_misaligned(XB_FD_exception_instruction_misaligned),
       .XB_FD_exception_ecall(XB_FD_exception_ecall),
@@ -305,7 +300,6 @@ module core
 	 // Initialize stage registers with side effects
 	 XB_regwrite <= 1'b0;
 	 XB_csr_writeback <= 1'b0;
-	 XB_FD_exception_unsupported_category <= 1'b0;
 	 XB_FD_exception_illegal_instruction <= 1'b0;
 	 XB_FD_exception_ecall <= 1'b0;
 	 XB_FD_exception_ebreak <= 1'b0;
@@ -357,8 +351,6 @@ module core
 	    // not a bubble
 	    XB_csr_writeback <= XB_csr_read;
 	    XB_regwrite <= FD_regwrite;
-	    XB_FD_exception_unsupported_category 
-	      <= FD_exception_unsupported_category;
 	    XB_FD_exception_illegal_instruction
 	      <= FD_exception_illegal_instruction;
 	    XB_FD_exception_ecall <= FD_exception_ecall;
@@ -373,7 +365,6 @@ module core
 	 else begin
 	    // A bubble has all side-effectful signals deactivated
 	    XB_regwrite <= 1'b0;
-	    XB_FD_exception_unsupported_category <= 1'b0;
 	    XB_FD_exception_illegal_instruction <= 1'b0;
 	    XB_FD_exception_instruction_misaligned <= 1'b0;
 	    XB_FD_exception_load_misaligned <= 1'b0;
