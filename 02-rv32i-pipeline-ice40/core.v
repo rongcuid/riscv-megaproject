@@ -25,15 +25,15 @@ module core
    clk, resetb,
    // MMU
    dm_we, im_addr, im_do, dm_addr, dm_di, dm_do, dm_be, dm_is_signed,
-   // Debug
-   FD_disasm_opcode, FD_PC
+   // IRQ
+   irq_mtimecmp
    );
 `include "core/aluop.vh"
 `include "core/exception_vector.vh"
    input wire clk, resetb;
 
    // Interface to MMU
-   input wire [31:0] im_do, dm_do;
+   input wire [31:0] im_do/*verilator public*/, dm_do;
    output 	     dm_we, dm_is_signed;
    output [31:0]     im_addr, dm_addr, dm_di;
    output [3:0]      dm_be;
@@ -43,6 +43,8 @@ module core
    reg [31:0] 	     im_addr;
    wire [3:0] 	     dm_be;
    
+   // Timer interrupt
+   input wire irq_mtimecmp;
    
    // Instruction Decode
    wire [31:0] 	     FD_imm;
@@ -59,20 +61,18 @@ module core
    wire [2:0] 	     FD_funct3;
    /* verilator lint_off UNUSED */
    wire [6:0] 	     FD_funct7;
-   wire 	     FD_bug_invalid_instr_format_onehot;
    /* verilator lint_on UNUSED */   
-   wire 	     FD_exception_unsupported_category;
    wire 	     FD_exception_illegal_instruction;
-   //wire 	     FD_exception_ecall;
+   wire 	     FD_exception_ecall;
+   wire 	     FD_exception_ebreak;
    reg 		     FD_exception_instruction_misaligned;
    wire 	     FD_exception_load_misaligned;
    wire 	     FD_exception_store_misaligned;
-   output wire [255:0] FD_disasm_opcode;
 
    // Program Counter
    wire 	     FD_initiate_exception;
-   output reg [31:0] FD_PC;
-   reg [31:0] 	     nextPC;
+   reg [31:0] FD_PC /*verilator public*/;
+   reg [31:0] 	     nextPC /*verilator public*/;
 
    // FD ALU
    wire [31:0] FD_aluout;
@@ -91,14 +91,15 @@ module core
    reg 	       XB_memtoreg;
    reg 	       XB_alu_is_signed;
    reg [31:0]  XB_aluop1_sel, XB_aluop2_sel, XB_alu_op;
-   reg 	       XB_FD_exception_unsupported_category;
    reg 	       XB_FD_exception_illegal_instruction;
-   //reg 	       XB_FD_exception_ecall;
+   reg 	       XB_FD_exception_ecall;
+   reg 	       XB_FD_exception_ebreak;
    reg 	       XB_FD_exception_instruction_misaligned;
    reg 	       XB_FD_exception_load_misaligned;
    reg 	       XB_FD_exception_store_misaligned;
    reg [31:0]  XB_PC;
    wire        FD_bubble;
+   reg FD_reset;
    reg 	       XB_bubble;
 
    // XB ALU
@@ -116,28 +117,29 @@ module core
    assign dm_is_signed = FD_dm_is_signed;
 
    instruction_decoder inst_dec
-     (
-      .inst(im_do), .aluout_1_0(FD_aluout[1:0]),
-      .immediate(FD_imm),
-      .alu_is_signed(FD_alu_is_signed),
-      .aluop1_sel(FD_aluop1_sel), .aluop2_sel(FD_aluop2_sel), 
-      .alu_op(FD_alu_op),
-      .pc_update(FD_pc_update), .pc_mepc(FD_pc_mepc),
-      .regwrite(FD_regwrite), .jump(FD_jump), .link(FD_link),
-      .jr(FD_jr), .br(FD_br),
-      .dm_be(FD_dm_be), .dm_we(FD_dm_we), 
-      .mem_is_signed(FD_dm_is_signed),
-      .csr_read(FD_csr_read), .csr_write(FD_csr_write),
-      .csr_set(FD_csr_set), .csr_clear(FD_csr_clear), .csr_imm(FD_csr_imm),
-      .a_rs1(FD_a_rs1), .a_rs2(FD_a_rs2), .a_rd(FD_a_rd), 
-      .funct3(FD_funct3), .funct7(FD_funct7),
-      .exception_unsupported_category(FD_exception_unsupported_category),
-      .exception_illegal_instruction(FD_exception_illegal_instruction),
-      //.exception_ecall(FD_exception_ecall),
-      .exception_load_misaligned(FD_exception_load_misaligned),
-      .exception_store_misaligned(FD_exception_store_misaligned),
-      .disasm_opcode(FD_disasm_opcode)
-      );
+   (
+     .FD_reset(FD_reset),
+     .inst(im_do), .aluout_1_0(FD_aluout[1:0]),
+     .immediate(FD_imm),
+     .alu_is_signed(FD_alu_is_signed),
+     .aluop1_sel(FD_aluop1_sel), .aluop2_sel(FD_aluop2_sel), 
+     .alu_op(FD_alu_op),
+     .pc_update(FD_pc_update), .pc_mepc(FD_pc_mepc),
+     .regwrite(FD_regwrite), .jump(FD_jump), .link(FD_link),
+     .jr(FD_jr), .br(FD_br),
+     .dm_be(FD_dm_be), .dm_we(FD_dm_we), 
+     .mem_is_signed(FD_dm_is_signed),
+     .csr_read(FD_csr_read), .csr_write(FD_csr_write),
+     .csr_set(FD_csr_set), .csr_clear(FD_csr_clear), .csr_imm(FD_csr_imm),
+     .a_rs1(FD_a_rs1), .a_rs2(FD_a_rs2), .a_rd(FD_a_rd), 
+     .funct3(FD_funct3), .funct7(FD_funct7),
+     .exception_illegal_instruction(FD_exception_illegal_instruction),
+     .exception_ecall(FD_exception_ecall),
+     .exception_ebreak(FD_exception_ebreak),
+     .exception_load_misaligned(FD_exception_load_misaligned),
+     .exception_store_misaligned(FD_exception_store_misaligned)
+     //.disasm_opcode(FD_disasm_opcode)
+   );
 
    // Next PC for Branches
    // reg [31:0]  nextPC_br;
@@ -179,7 +181,7 @@ module core
    end
 
    // Update the Program Counter
-   always @ (posedge clk, negedge resetb) begin : PROGRAM_COUNTER
+   always @ (posedge clk) begin : PROGRAM_COUNTER
       if (!resetb) begin
 	 FD_PC <= 32'hFFFFFFFC;
       end
@@ -264,15 +266,16 @@ module core
       .set(XB_csr_set), .clear(XB_csr_clear),
       .imm(XB_csr_imm), .a_rd(FD_a_rd),
       .initiate_exception(FD_initiate_exception),
-      .XB_FD_exception_unsupported_category(XB_FD_exception_unsupported_category),
       .XB_FD_exception_illegal_instruction(XB_FD_exception_illegal_instruction),
       .XB_FD_exception_instruction_misaligned(XB_FD_exception_instruction_misaligned),
-      //.XB_FD_exception_ecall(FD_exception_ecall),
+      .XB_FD_exception_ecall(XB_FD_exception_ecall),
+      .XB_FD_exception_ebreak(XB_FD_exception_ebreak),
       .XB_FD_exception_load_misaligned(XB_FD_exception_load_misaligned),
       .XB_FD_exception_store_misaligned(XB_FD_exception_store_misaligned),
+      .irq_mtimecmp(irq_mtimecmp),
       .src_dst(FD_imm[11:0]),
       .d_rs1(FD_d_rs1), .uimm(FD_a_rs1), .FD_aluout(FD_aluout),
-      .nextPC(nextPC), .XB_pc(XB_PC), .data_out(XB_csr_out), 
+      .nextPC(nextPC), .XB_pc(XB_PC[31:2]), .data_out(XB_csr_out), 
       .csr_mepc(CSR_mepc), .csr_mtvec(CSR_mtvec)
       );
 
@@ -289,17 +292,17 @@ module core
    assign dm_addr = FD_aluout;
    assign dm_di = FD_d_rs2;
 
-   // Flush instructions on exception
+   // Flush instructions on exception.
    assign FD_bubble = FD_initiate_exception;
    // The main pipeline
-   always @ (posedge clk, negedge resetb) begin : CORE_PIPELINE
+   always @ (posedge clk) begin : CORE_PIPELINE
       if (!resetb) begin
 	 // Initialize stage registers with side effects
 	 XB_regwrite <= 1'b0;
 	 XB_csr_writeback <= 1'b0;
-	 XB_FD_exception_unsupported_category <= 1'b0;
 	 XB_FD_exception_illegal_instruction <= 1'b0;
-	 //XB_FD_exception_ecall <= 1'b0;
+	 XB_FD_exception_ecall <= 1'b0;
+	 XB_FD_exception_ebreak <= 1'b0;
 	 XB_FD_exception_instruction_misaligned <= 1'b0;
 	 XB_FD_exception_load_misaligned <= 1'b0;
 	 XB_FD_exception_store_misaligned <= 1'b0;
@@ -315,8 +318,11 @@ module core
 	 XB_alu_is_signed <= 1'bX;
 	 XB_aluop1_sel <= 32'bX;
 	 XB_aluop2_sel <= 32'bX;
+         // FD Reset
+         FD_reset <= 1'b1;
       end
       else if (clk) begin
+        FD_reset <= 1'b0;
 	 // XB stage
 	 //// Operators
 	 if (!FD_link) begin
@@ -345,11 +351,10 @@ module core
 	    // not a bubble
 	    XB_csr_writeback <= XB_csr_read;
 	    XB_regwrite <= FD_regwrite;
-	    XB_FD_exception_unsupported_category 
-	      <= FD_exception_unsupported_category;
 	    XB_FD_exception_illegal_instruction
 	      <= FD_exception_illegal_instruction;
-	    //XB_FD_exception_ecall <= FD_exception_ecall;
+	    XB_FD_exception_ecall <= FD_exception_ecall;
+	    XB_FD_exception_ebreak <= FD_exception_ebreak;
 	    XB_FD_exception_instruction_misaligned
 	      <= FD_exception_instruction_misaligned;
 	    XB_FD_exception_load_misaligned
@@ -360,7 +365,6 @@ module core
 	 else begin
 	    // A bubble has all side-effectful signals deactivated
 	    XB_regwrite <= 1'b0;
-	    XB_FD_exception_unsupported_category <= 1'b0;
 	    XB_FD_exception_illegal_instruction <= 1'b0;
 	    XB_FD_exception_instruction_misaligned <= 1'b0;
 	    XB_FD_exception_load_misaligned <= 1'b0;

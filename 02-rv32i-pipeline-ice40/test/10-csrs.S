@@ -19,11 +19,11 @@ test_csrs:
 	bne x1, x2, test_failed
 	
 	# mepc
-	li x3, 0x2
-	csrwi mepc, 0x1
+	li x3, 0x8
+	csrwi mepc, 0x4
 	csrs mepc, x3
 	csrr x1, mepc
-	li x2, 0x3
+	li x2, 0xC
 	bne x1, x2, test_failed
 	
 	# mcause

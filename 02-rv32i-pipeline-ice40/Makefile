@@ -1,12 +1,15 @@
-RISCV_PREFIX ?= riscv32-unknown-elf-
+#RISCV_PREFIX ?= riscv32-unknown-elf-
+RISCV_PREFIX ?= riscv32-zephyr-elf-
 CC=$(RISCV_PREFIX)gcc
 AS=$(RISCV_PREFIX)as
 OBJCOPY=$(RISCV_PREFIX)objcopy
-all: run_compliance_quick
-#	echo "(MM) Compiling and running all tests"
+
+all: run_compliance
+
+synthesis: board_top.json
 
 run_compliance: compile_cpu_run
-	cd riscv-compliance && make
+	cd riscv-compliance && make clean && make
 
 #COMPLIANCE_TEST=I-ENDIANESS-01
 #COMPLIANCE_TEST=I-ADD-01
@@ -26,8 +29,8 @@ run_compliance: compile_cpu_run
 #COMPLIANCE_TEST=I-CSRRW-01
 #COMPLIANCE_TEST=I-CSRRWI-01
 #COMPLIANCE_TEST=I-DELAY_SLOTS-01
-#COMPLIANCE_TEST=I-EBREAK-01# Fails
-#COMPLIANCE_TEST=I-ECALL-01# Fails
+#COMPLIANCE_TEST=I-EBREAK-01
+COMPLIANCE_TEST=I-ECALL-01
 #COMPLIANCE_TEST=I-FENCE.I-01# Fails
 #COMPLIANCE_TEST=I-IO
 #COMPLIANCE_TEST=I-JAL-01
@@ -38,7 +41,7 @@ run_compliance: compile_cpu_run
 #COMPLIANCE_TEST=I-LHU-01
 #COMPLIANCE_TEST=I-LW-01
 #COMPLIANCE_TEST=I-MISALIGN_JMP-01
-COMPLIANCE_TEST=I-MISALIGN_LDST-01
+#COMPLIANCE_TEST=I-MISALIGN_LDST-01
 #COMPLIANCE_TEST=I-NOP-01
 #COMPLIANCE_TEST=I-OR-01
 #COMPLIANCE_TEST=I-ORI-01
@@ -68,7 +71,8 @@ run_compliance_quick: compile_cpu_run compile_compliance_quick
 	diff tb_out/result.log riscv-compliance/riscv-test-suite/rv32i/references/$(COMPLIANCE_TEST).reference_output
 
 compile_compliance_quick:
-	$(CC) -march=rv32i -mabi=ilp32 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Iriscv-compliance/riscv-test-env/ -Iriscv-compliance/riscv-test-env/msc/ -Iriscv-compliance/riscv-target/msc-02/ -Triscv-compliance/riscv-test-env/msc/link.ld riscv-compliance/riscv-test-suite/rv32i/src/$(COMPLIANCE_TEST).S -o tb_out/$(COMPLIANCE_TEST).elf
+	$(CC) -march=RV32I -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Iriscv-compliance/riscv-test-env/ -Iriscv-compliance/riscv-test-env/msc/ -Iriscv-compliance/riscv-target/msc-02/ -Triscv-compliance/riscv-test-env/msc/link.ld riscv-compliance/riscv-test-suite/rv32i/src/$(COMPLIANCE_TEST).S -E > tb_out/$(COMPLIANCE_TEST)-expand.S
+	$(CC) -Wl,--build-id=none -march=RV32I -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Iriscv-compliance/riscv-test-env/ -Iriscv-compliance/riscv-test-env/msc/ -Iriscv-compliance/riscv-target/msc-02/ -Triscv-compliance/riscv-test-env/msc/link.ld riscv-compliance/riscv-test-suite/rv32i/src/$(COMPLIANCE_TEST).S -o tb_out/$(COMPLIANCE_TEST).elf
 	$(OBJCOPY) -O binary tb_out/$(COMPLIANCE_TEST).elf tb_out/$(COMPLIANCE_TEST).elf.bin
 
 compile_regfile_tb: regfile.v regfile_sc.cpp
@@ -79,7 +83,7 @@ compile_regfile_tb: regfile.v regfile_sc.cpp
 run_regfile_tb: compile_regfile_tb
 	./tb_out/regfile_tb
 
-compile_mmu_tb: mmu.v mmu_sc.cpp BRAM_SSP.v 
+compile_mmu_tb: mmu.v mmu_sc.cpp SB_SPRAM256KA.v 
 	echo "(MM) Compiling MMU testbench"
 	verilator -Wall --sc $^ --exe -o ../tb_out/mmu_tb
 	make -C obj_dir -f Vmmu.mk
@@ -88,7 +92,7 @@ run_mmu_tb: compile_mmu_tb
 	./tb_out/mmu_tb
 
 tb_out/%.bin: test/%.S
-	$(AS) -march=rv32i $^ -o $(@:.bin=.elf)
+	$(AS) -march=RV32I $^ -o $(@:.bin=.elf)
 	$(OBJCOPY) -O binary $(@:.bin=.elf) $@
 #	riscv32-unknown-elf-as $^ -o $(@:.bin=.elf)
 #	riscv32-unknown-elf-objcopy -O binary $(@:.bin=.elf) $@
@@ -111,19 +115,29 @@ TEST_PROGRAMS+=tb_out/13-csr.bin
 TEST_PROGRAMS+=tb_out/14-mem.bin
 TEST_PROGRAMS+=tb_out/15-exception.bin
 
-compile_core_tb: core_top.v core_top_sc.cpp BRAM_SSP.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v 
+compile_cpu_top_tb: cpu_top.v cpu_top_sc.cpp core_top.v EBRAM_ROM.v SPRAM_16Kx16.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v io_port.v
 	echo "(MM) Compiling CPU Top testbench"
-	verilator -Wall --sc $^ --exe -o ../tb_out/cpu_top_tb
-	make -C obj_dir -f Vcore_top.mk
+	verilator -Wall --top-module cpu_top --sc $^ --exe -o ../tb_out/cpu_top_tb
+	make -C obj_dir -f Vcpu_top.mk
 
-compile_cpu_run: cpu_run_sc.cpp core_top.v BRAM_SSP.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v 
+compile_cpu_run: cpu_run_sc.cpp cpu_top.v core_top.v SPRAM_16Kx16.v EBRAM_ROM.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v timer.v
 	echo "(MM) Compiling CPU Simulator"
-	verilator -Wall --sc $^ --exe -o ../tb_out/cpu_run
-	make -C obj_dir -f Vcore_top.mk
+	verilator -Wall --sc $^ --top-module cpu_top --exe -o ../tb_out/cpu_run
+	make -C obj_dir -f Vcpu_top.mk
 
-run_core_tb: compile_core_tb $(TEST_PROGRAMS)
+run_cpu_top_tb: compile_cpu_top_tb $(TEST_PROGRAMS)
 	./tb_out/cpu_top_tb
+
+board_top.json: SPRAM_16Kx16_syn.v EBRAM_ROM.v core.v core_top.v cpu_top.v mmu.v regfile.v timer.v io_port.v core/csr_ehu.v core/instruction_decoder.v board_top.v board_top.ys
+	yosys $^ | tee synthesis.log
+
+compliance_clean:
+	cd riscv-compliance && make clean && cd ..
 
 clean:
 	rm -rf tmp tb_out/* obj_dir
+	rm -f board_top.json
+	rm -f board_top.asc
+	rm -f board_top.blif
+	rm -f synthesis.log
 	find . -name "*~" -exec rm -f {} \;

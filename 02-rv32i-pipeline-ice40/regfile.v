@@ -30,7 +30,7 @@ module regfile(
    // Temporary variable
    integer 		  i;
 
-   always @ (posedge clk, negedge resetb) begin : MAIN_CLK_PROCESS
+   always @ (posedge clk) begin : MAIN_CLK_PROCESS
       if (!resetb) begin
 	 // Registers do not initialize
 	 for (i = 0; i < 32; i = i + 1) begin

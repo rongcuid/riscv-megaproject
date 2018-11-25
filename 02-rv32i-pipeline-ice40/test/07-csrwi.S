@@ -19,7 +19,7 @@ test_csrwi:
 	# mepc
 	csrwi mepc, 0xB
 	csrr x1, mepc
-	li x2, 0xB
+	li x2, 0x8
 	bne x1, x2, test_failed
 	
 	# mcause

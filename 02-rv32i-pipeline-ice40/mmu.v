@@ -1,9 +1,9 @@
 /*
  MMU with a bank of main memory and an IO port. The MMU is byte-addressable.
  Access latency is one clock.
- 
+
  Memory Mapping:
- 
+
  - 0x00000000 - 0x00000FFF ROM instruction memory
  - 0x10000000 - 0x7FFFFFFF Main memory
  - 0x80000000 - 0x800000FF I/O ports
@@ -11,7 +11,7 @@
  Exceptions are not generated from MMU
 
  Memory Bank Configuration: 4 interleaving banks of 8-bit wide SSP-BRAM
- 
+
  Limitations: 
  - Data memory port cannot access instruction memory
  - Instruction memory port can only access instruction memory
@@ -20,19 +20,19 @@
  */
 
 module mmu(
-	   clk, resetb, dm_we,
-	   im_addr, im_do, dm_addr, dm_di, dm_do,
-	   dm_be, is_signed,
-	   // To Instruction Memory
-	   im_addr_out, im_data,
-           im_addr_out_2, im_data_2,
-	   // TO IO
-	   io_addr, io_en, io_we, io_data_read, io_data_write
-	   );
+           clk, resetb, dm_we,
+           im_addr, im_do, dm_addr, dm_di, dm_do,
+           dm_be, is_signed,
+           // To Instruction Memory
+           // im_addr_out, im_data,
+           // im_addr_out_2, im_data_2,
+           // TO IO
+           io_addr, io_en, io_we, io_data_read, io_data_write
+           );
    
    parameter 
-     WORD_DEPTH = 256,
-     WORD_DEPTH_LOG = 8;
+     WORD_DEPTH = 65536,
+     WORD_DEPTH_LOG = 16;
 
    localparam
      DEV_IM = 1,
@@ -51,15 +51,16 @@ module mmu(
    // DM sign extend or unsigned extend
    input wire 	     is_signed;
    // IM addr out to ROM
-   output wire [11:2] im_addr_out, im_addr_out_2;
+   // wire [13:2] im_addr_out, im_addr_out_2;
    // IM data from ROM, IO data from IO bank
-   input wire [31:0]  im_data, im_data_2, io_data_read;
+   //input wire [31:0]  im_data, im_data_2;
+   input wire [31:0] io_data_read;
    // IO data to IO bank, DM data output
    output reg [31:0]  io_data_write, dm_do;
    // A temporary register for dm_do
    reg [31:0] 	      dm_do_tmp;
    // IM data output
-   output reg [31:0]  im_do;
+   output wire [31:0]  im_do;
    // IO address to IO bank
    output reg [7:0]   io_addr;
    // IO enable, IO write enable
@@ -85,7 +86,7 @@ module mmu(
    // MMU signed/unsigned extend, pipelined
    reg 			    is_signed_p;
    // IM port 2 pipelined
-   reg [31:0]               im_data_2_p;
+   reg [31:0] 		    im_data_2_p;
    // IO Read input, IO read input pipelined, IO write output
    reg [31:0] 		    io_data_write_tmp;
    // IO address
@@ -93,57 +94,40 @@ module mmu(
    // IO enable, IO write enable
    reg 			    io_en_tmp, io_we_tmp;
 
-   // In this implementaion, the IM ROM address is simply the 11:2 bits of IM address input
-   assign im_addr_out[11:2] = im_addr[11:2];
+   // In this implementaion, the IM ROM address is simply the 13:2 bits of IM address input
+   //assign im_addr_out[13:2] = im_addr[13:2];
    // Second port uses DM addr
-   assign im_addr_out_2[11:2] = dm_addr[11:2];
+   //assign im_addr_out_2[13:2] = dm_addr[13:2];
 
    // BRAM bank in interleaved configuration
-   BRAM_SSP  #(
-	       .DEPTH(WORD_DEPTH>>2), .DEPTH_LOG(WORD_DEPTH_LOG-2), .WIDTH(8)
-	       ) ram0 (
-   		       .clk(clk), .we(ram_we), .en(dm_be[0]), 
-   		       .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
-   		       .din(ram_di[0+:8]), .dout(ram_do[0+:8])
-   		       );
-   BRAM_SSP 
-     #(
-       .DEPTH(WORD_DEPTH>>2), .DEPTH_LOG(WORD_DEPTH_LOG-2), .WIDTH(8)
-       )
-   ram1 (
-   	 .clk(clk), .we(ram_we), .en(dm_be[1]), 
-   	 .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
-   	 .din(ram_di[8+:8]), .dout(ram_do[8+:8])
-	 );
-   BRAM_SSP
-     #(
-       .DEPTH(WORD_DEPTH>>2), .DEPTH_LOG(WORD_DEPTH_LOG-2), .WIDTH(8)
-       )
-   ram2 (
-   	 .clk(clk), .we(ram_we), .en(dm_be[2]), 
-   	 .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
-   	 .din(ram_di[16+:8]), .dout(ram_do[16+:8])
-   	 );
-   BRAM_SSP
-     #(
-       .DEPTH(WORD_DEPTH>>2), .DEPTH_LOG(WORD_DEPTH_LOG-2), .WIDTH(8)
-       )
-   ram3 (
-   	 .clk(clk), .we(ram_we), .en(dm_be[3]), 
-   	 .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
-   	 .din(ram_di[24+:8]), .dout(ram_do[24+:8])
-   	 );
+   SPRAM_16Kx16 ram0 (
+                       .clk(clk), .wren(ram_we), 
+		       .maskwren({{2{dm_be[1]}},{2{dm_be[0]}}}), 
+                       .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
+                       .din(ram_di[0+:16]), .dout(ram_do[0+:16])
+                       );
+   SPRAM_16Kx16 ram1 (
+                       .clk(clk), .wren(ram_we), 
+		       .maskwren({{2{dm_be[3]}},{2{dm_be[2]}}}), 
+                       .addr(ram_addr[WORD_DEPTH_LOG-1:2]),
+                       .din(ram_di[16+:16]), .dout(ram_do[16+:16])
+                       );
+
+   EBRAM_ROM rom0(
+     .clk(clk), .addra(im_addr[10:2]), .douta(im_do),
+     .addrb(dm_addr[10:2]), .doutb(im_data_2_p)
+   );
 
    // The MMU pipeline
-   always @ (posedge clk, negedge resetb) begin : MMU_PIPELINE
+   always @ (posedge clk) begin : MMU_PIPELINE
       if (!resetb) begin
 	 chosen_device_p <= 3'bX;
 	 is_signed_p <= 1'bX;
 	 dm_be_p <= 4'b0;
 	 // First instruction is initialized as NOP
-	 im_do <= 32'b0000_0000_0000_00000_000_00000_0010011;
+	 //im_do <= 32'b0000_0000_0000_00000_000_00000_0010011;
 	 io_data_write <= 32'bX;
-         im_data_2_p <= 32'bX;
+	 //im_data_2_p <= 32'bX;
 	 io_en <= 1'b0;
 	 io_we <= 1'b0;
 	 io_addr <= 8'bX;
@@ -153,8 +137,8 @@ module mmu(
 	 dm_be_p <= dm_be;
 	 chosen_device_p <= chosen_device_tmp[2:0];
 	 is_signed_p <= is_signed;
-	 im_do <= im_data;
-         im_data_2_p <= im_data_2;
+	 //im_do <= im_data;
+	 //im_data_2_p <= im_data_2;
 	 io_data_write <= io_data_write_tmp;
 	 io_en <= io_en_tmp;
 	 io_we <= io_we_tmp;
@@ -170,7 +154,7 @@ module mmu(
    always @ (*) begin : DM_ADDR_MAP
       ram_addr_temp = dm_addr - 32'h10000000;
       io_addr_temp = dm_addr - 32'h80000000;
-
+      io_addr_tmp = io_addr_temp[7:0];;
       io_en_tmp = 1'b0;
       io_we_tmp = 1'b0;
       io_data_write_tmp = 32'bX;
@@ -179,23 +163,23 @@ module mmu(
       ram_di = 32'bX;
       chosen_device_tmp = DEV_UNKN;
       if (dm_addr[31:12] == 20'b0) begin
-   	 // 0x00000000 - 0x00000FFF
-   	 chosen_device_tmp = DEV_IM;
+	 // 0x00000000 - 0x00000FFF
+	 chosen_device_tmp = DEV_IM;
       end
       else if (dm_addr[31] == 1'b0 && dm_addr[30:28] != 3'b0) begin
-   	 // 0x10000000 - 0x7FFFFFFF
-   	 ram_addr = ram_addr_temp[2+:WORD_DEPTH_LOG-2];
-   	 ram_di = dm_di_shift;
-   	 ram_we = dm_we;
-   	 chosen_device_tmp = DEV_DM;
+	 // 0x10000000 - 0x7FFFFFFF
+	 ram_addr = ram_addr_temp[2+:WORD_DEPTH_LOG-2];
+	 ram_di = dm_di_shift;
+	 ram_we = dm_we;
+	 chosen_device_tmp = DEV_DM;
       end
       else if (dm_addr[31:8] == 24'h800000) begin
-   	 // 0x80000000 - 0x800000FF
-   	 io_addr_tmp = io_addr_temp[7:0];
-   	 io_en_tmp = 1'b1;
-   	 io_we_tmp = dm_we;
-   	 io_data_write_tmp = dm_di_shift;
-   	 chosen_device_tmp = DEV_IO;
+	 // 0x80000000 - 0x800000FF
+	 // io_addr_tmp = io_addr_temp[7:0];
+	 io_en_tmp = 1'b1;
+	 io_we_tmp = dm_we;
+	 io_data_write_tmp = dm_di_shift;
+	 chosen_device_tmp = DEV_IO;
       end
    end // block: DM_ADDR_MAP
    
