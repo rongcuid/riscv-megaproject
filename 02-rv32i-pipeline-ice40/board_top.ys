@@ -1,5 +1,5 @@
 # check design hierarchy
-# hierarchy
+#hierarchy
 
 ## translate processes (always blocks)
 #proc; opt
@@ -10,4 +10,4 @@
 ## implement memories (arrays)
 #memory; opt
 
-synth_ice40 -top cpu_top -json cpu_top.json
+synth_ice40 -top board_top -json board_top.json
