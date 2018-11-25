@@ -166,6 +166,7 @@ module instruction_decoder
       // Default memory actions
       dm_be = 4'b0;
       dm_we = 1'b0;
+      mem_is_signed = 1'b0;
       // Default branch actions
       jump = 1'b0;
       jr = 1'b0;

@@ -129,7 +129,7 @@ run_cpu_top_tb: compile_cpu_top_tb $(TEST_PROGRAMS)
 	./tb_out/cpu_top_tb
 
 board_top.json: SPRAM_16Kx16_syn.v EBRAM_ROM.v core.v core_top.v cpu_top.v mmu.v regfile.v timer.v io_port.v core/csr_ehu.v core/instruction_decoder.v board_top.v board_top.ys
-	yosys $^
+	yosys $^ | tee synthesis.log
 
 compliance_clean:
 	cd riscv-compliance && make clean && cd ..
@@ -139,4 +139,5 @@ clean:
 	rm -f board_top.json
 	rm -f board_top.asc
 	rm -f board_top.blif
+	rm -f synthesis.log
 	find . -name "*~" -exec rm -f {} \;
