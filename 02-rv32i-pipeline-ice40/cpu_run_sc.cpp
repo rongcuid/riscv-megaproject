@@ -73,16 +73,18 @@ public:
   uint32_t get_memory_word(uint32_t i) 
   {
     uint32_t word = 0;
-    word |= dut->cpu_top->CT0->MMU0->ram0->RAM[i];
-    word |= dut->cpu_top->CT0->MMU0->ram1->RAM[i] << 16;
+    word |= dut->cpu_top->CT0->MMU0->ram10->RAM[i];
+    word |= dut->cpu_top->CT0->MMU0->ram11->RAM[i] << 16;
     return word;
   }
 
   void initialize_memory() 
   {
     for (int i=0; i<1024; ++i) {
-      dut->cpu_top->CT0->MMU0->ram0->RAM[i] = 0xAAAA;
-      dut->cpu_top->CT0->MMU0->ram1->RAM[i] = 0xAAAA;
+      dut->cpu_top->CT0->MMU0->ram00->RAM[i] = 0xAAAA;
+      dut->cpu_top->CT0->MMU0->ram01->RAM[i] = 0xAAAA;
+      dut->cpu_top->CT0->MMU0->ram10->RAM[i] = 0xAAAA;
+      dut->cpu_top->CT0->MMU0->ram11->RAM[i] = 0xAAAA;
     }
   }
   void dump_memory();
