@@ -1,8 +1,8 @@
 [submodule "02-rv32i-pipeline-ice40/riscv-compliance"]
 	path = 02-rv32i-pipeline-ice40/riscv-compliance
-	url = https://github.com:rongcuid/riscv-compliance.git
+	url = https://github.com/rongcuid/riscv-compliance.git
         branch = msc_target
 [submodule "02-rv32i-pipeline-ice40/zephyr"]
 	path = 02-rv32i-pipeline-ice40/zephyr
-	url = https://github.com:rongcuid/zephyr.git
+	url = https://github.com/rongcuid/zephyr.git
         branch = contest/msc-port
