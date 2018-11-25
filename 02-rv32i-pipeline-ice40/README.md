@@ -11,24 +11,26 @@ registers such as performance counters are not implemented.
 
 # Interrupts
 
-Interrupts are not supported.
+System timer compare interrupt
 
 # Exceptions
 
-Precise exceptions are implemented. Illegal Instruction Exception and
-Instruction/Memory Address Misaligned Exception are supported.
+Precise exceptions are implemented. Illegal Instruction Exception,
+Instruction/Memory Address Misaligned Exception, ECALL, and EBREAK
+ are supported.
 
 # Vectors
 
 - Reset: 0x00000000
 
-- Illegal Instruction Exception: 0x00000004
-
-- Misaligned Exception: 0x00000008
+- Exception vector: 0x00000004, can be changed by writing mtvec
 
 # I/O
 
-Memory mapped on 0x80000000-0x800000FF
+- Memory mapped on 0x80000000-0x800000FF
+- A GPIO is on 0x80000000, 8-bits wide. The same port is also used to communicate with
+  test bench
+- System timer `mtime` is on 0x80000010, `mtimecmp` is on 0x80000018. Both are 64-bit
 
 # Memory
 
@@ -38,20 +40,31 @@ Memory mapped on 0x80000000-0x800000FF
 
 - IO on 0x80000000-0x800000FF
 
-Instruction memory can only access the ROM
+Instruction memory is read only, thus _FENCE.I test always fails_.
 
-Data Memory cannot access the ROM
+Data Memory can access the ROM. 
 
-# Improvements That Can Be Done
+# Compliance
 
-- Duplicate logic that selects operands for XB ALU. Currently, such
-  logic exists both on FD stage and XB stage
+Since instruction memory is read only, _FENCE.I_ test cannot pass. All other tests
+of riscv-compliance pass.
 
-- Confusing naming of CSR_EHU signals. CSR_EHU exist on XB side, but
-  the internal pipeline means its input is on FD side
+The compliance suite has following modifications:
 
-- Better enumeration for ALU selectors, using signals of shorter width
+1. Linker script is modified to use specified address range
+2. EXTRA\_INIT is defined to load `.data` and `.bss` region
+3. At the end of init, a command is sent through 0x80000000 
+  to prompt the test bench to scan memory
+4. `.data` region begins with word 0xdeadc0de
+5. `.data` region ends with word 0xdeaddead
+6. During scanning, testbench finds `0xdeaddead` from highest address.
+  Then, it finds the first entry which is not `0xffffffff`, marking it
+  as the base result address
+7. At the end of the test, another command is sent through 0x80000000
+  to halt the test bench
 
-- Allow DM access to instruction memory
+# Zephyr
 
-- Use assert for bug catching instead of signals
+Theoretically, Zephyr should work because all components it use work. However,
+it is too large to fit into my FPGA, so I could not test it.
+
