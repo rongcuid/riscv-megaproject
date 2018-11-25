@@ -114,8 +114,8 @@ module mmu(
                        );
 
    EBRAM_ROM rom0(
-     .clk(clk), .addra(im_addr[13:2]), .douta(im_do),
-     .addrb(dm_addr[13:2]), .doutb(im_data_2_p)
+     .clk(clk), .addra(im_addr[10:2]), .douta(im_do),
+     .addrb(dm_addr[10:2]), .doutb(im_data_2_p)
    );
 
    // The MMU pipeline

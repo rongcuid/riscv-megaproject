@@ -6,8 +6,8 @@ module EBRAM_ROM(
                 addra, douta, addrb, doutb
 		);
    parameter 
-     DEPTH = 3072,
-     DEPTH_LOG = 12,
+     DEPTH = 512,
+     DEPTH_LOG = 9,
      WIDTH = 32;
    
    input wire clk;

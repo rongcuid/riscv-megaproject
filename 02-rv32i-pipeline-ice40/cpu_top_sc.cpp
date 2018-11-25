@@ -22,7 +22,6 @@ public:
   Vcpu_top* dut;
   uint32_t* ROM;
   uint32_t* FD_PC;
-  //char* FD_disasm_opcode;
   uint32_t* FD_inst;
 
   //rom_1024x32_t* instruction_rom;
@@ -71,20 +70,24 @@ public:
   bool load_program(const std::string& path)
   {
     //instruction_rom->load_binary(path);
-    for (int i=0; i<3072; ++i) {
+    for (int i=0; i<512; ++i) {
       ROM[i] = 0;
     }
     ifstream f(path, std::ios::binary);
     if (f.is_open()) {
       f.seekg(0, f.end);
       int size = f.tellg();
+      if (size == 0 || size > 2048) {
+	return false;
+      }
+      if (size % 4 != 0) {
+	return false;
+      }
       f.seekg(0, f.beg);
       auto buf = new char[size];
       f.read(buf, size);
       // std::vector<unsigned char> buf
       //   (std::istreambuf_iterator<char>(f), {});
-      if (size == 0) return false;
-      if (size % 4 != 0) return false;
 
       auto words = (uint32_t*) buf;
       for (int i=0; i<size/4; ++i) {

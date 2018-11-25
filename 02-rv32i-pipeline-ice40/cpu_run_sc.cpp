@@ -11,11 +11,12 @@
 #include "Vcpu_top_core_top.h"
 #include "Vcpu_top_core_top.h"
 #include "Vcpu_top_core.h"
-#include "Vcpu_top_instruction_decoder.h"
 #include "Vcpu_top_mmu.h"
 #include "Vcpu_top_regfile.h"
 #include "Vcpu_top_EBRAM_ROM.h"
 #include "Vcpu_top_SPRAM_16Kx16.h"
+
+#include "disasm.h"
 
 class cpu_run_t : public sc_module
 {
@@ -23,7 +24,7 @@ public:
   Vcpu_top* dut;
   uint32_t* ROM;
   uint32_t* FD_PC;
-  char* FD_disasm_opcode;
+  uint32_t* FD_inst;
 
   sc_in<bool> clk_tb;
   sc_signal<bool> resetb_tb;
@@ -50,8 +51,9 @@ public:
     dut->gpio0(gpio0_tb);
     ROM = dut->cpu_top->CT0->MMU0->rom0->ROM;
     FD_PC = &(dut->cpu_top->CT0->CPU0->FD_PC);
-    FD_disasm_opcode = 
-      (char*)dut->cpu_top->CT0->CPU0->inst_dec->disasm_opcode;
+    FD_inst = &(dut->cpu_top->CT0->CPU0->im_do);
+    // FD_disasm_opcode = 
+    //   (char*)dut->cpu_top->CT0->CPU0->inst_dec->disasm_opcode;
   }
 
   std::string reverse(char* s) {
@@ -88,7 +90,7 @@ public:
 
   void view_snapshot_pc()
   {
-    std::cout << "(TT) Opcode=" << reverse(FD_disasm_opcode)
+    std::cout << "(TT) Opcode=" << disasm(*FD_inst)
 	      << ", FD_PC=0x" 
 	      << std::hex 
 	      << *FD_PC
@@ -96,7 +98,7 @@ public:
   }
   void view_snapshot_hex()
   {
-    std::cout << "(TT) Opcode=" << reverse(FD_disasm_opcode)
+    std::cout << "(TT) Opcode=" << disasm(*FD_inst)
 	      << ", FD_PC=0x" 
 	      << std::hex 
 	      << *FD_PC
@@ -107,7 +109,7 @@ public:
 
   void view_snapshot_int()
   {
-    std::cout << "(TT) Opcode=" << reverse(FD_disasm_opcode)
+    std::cout << "(TT) Opcode=" << disasm(*FD_inst)
 	      << ", FD_PC=0x" 
 	      << std::hex 
 	      << *FD_PC
@@ -121,20 +123,22 @@ public:
   
   bool load_program(const std::string& path)
   {
-    for (int i=0; i<3072; ++i) {
+    for (int i=0; i<512; ++i) {
       ROM[i] = 0;
     }
     ifstream f(path, std::ios::binary);
     if (f.is_open()) {
       f.seekg(0, f.end);
       int size = f.tellg();
+      if (size == 0 || size > 2048) {
+	return false;
+      }
+      if (size % 4 != 0) {
+	return false;
+      }
       f.seekg(0, f.beg);
       auto buf = new char[size];
       f.read(buf, size);
-      // std::vector<unsigned char> buf
-      //   (std::istreambuf_iterator<char>(f), {});
-      if (size == 0) return false;
-      if (size % 4 != 0) return false;
 
       auto words = (uint32_t*) buf;
       for (int i=0; i<size/4; ++i) {
@@ -142,7 +146,6 @@ public:
       }
       f.close();
       delete[] buf;
-      //update.write(!update.read());
       return true;
     }
     else {
