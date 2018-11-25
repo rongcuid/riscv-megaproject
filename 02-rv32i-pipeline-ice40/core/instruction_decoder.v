@@ -17,6 +17,7 @@ module instruction_decoder
    dm_be, dm_we, mem_is_signed,
    csr_read, csr_write, csr_set, csr_clear, csr_imm,
    a_rs1, a_rs2, a_rd, funct3, funct7,
+   fence_i,
    // Exceptions
    // bug_invalid_instr_format_onehot,
    exception_illegal_instruction,
@@ -59,6 +60,8 @@ module instruction_decoder
    output [2:0]      funct3;
    // The funct7 field
    output [6:0]      funct7;
+   // FENCE.I
+   output wire 	     fence_i;
    // This shall be refactored to assert()
    // output 	     bug_invalid_instr_format_onehot;
    // Exceptions to be raised
@@ -164,6 +167,8 @@ module instruction_decoder
       dm_be = 4'b0;
       dm_we = 1'b0;
       mem_is_signed = 1'b0;
+      // FENCE.I
+      fence_i = 1'b0;
       // Default branch actions
       jump = 1'b0;
       jr = 1'b0;
@@ -384,6 +389,9 @@ module instruction_decoder
       end
       `MISC_MEM: begin
         // NOP since this core is in order commit
+	 if (funct3 == 3'b000) begin : FENCE_I
+	    fence_i = 1'b1;
+	 end
       end
       `SYSTEM: begin
         // Environment instructions are implemented via software
@@ -462,83 +470,5 @@ end
 	 regwrite = 1'b0;
       end
       
-      // Lower two bits are always 11
-      // exception_unsupported_category
-      // 	= (opcode[1:0] != 2'b11) ? 1'b1 : 1'b0;
-      // if (opcode[1:0] != 2'b11)
-      // 	exception_unsupported_category = 1'b1;
    end
-
-   // reg [255:0] disasm_opcode /*verilator public*/;
-
-   // always @ (*) begin : DISASM
-   //    case (opcode[6:2])
-   // 	`LOAD: disasm_opcode = "LOAD    ";
-   // 	`OP_IMM: begin
-   // 	   case (funct3)
-   // 	     3'b000: disasm_opcode = "ADDI    ";
-   // 	     3'b001: disasm_opcode = "SLLI    ";
-   // 	     3'b010: disasm_opcode = "SLTI    ";
-   // 	     3'b011: disasm_opcode = "SLTIU   ";
-   // 	     3'b100: disasm_opcode = "XORI    ";
-   // 	     3'b101: disasm_opcode = funct7[5] 
-   // 					? "SRAI    " : "SRLI    ";
-   // 	     3'b110: disasm_opcode = "ORI     ";
-   // 	     3'b111: disasm_opcode = "ANDI    ";
-   // 	     default: disasm_opcode = "OP-IMM  ";
-   // 	   endcase
-   // 	end
-   // 	`AUIPC: disasm_opcode = "AUIPC   ";
-   // 	`STORE: disasm_opcode = "STORE   ";
-   // 	`OP: begin
-   // 	   case (funct3)
-   // 	     3'b000: disasm_opcode = funct7[5] 
-   // 					? "SUB     " : "ADD     ";
-   // 	     3'b001: disasm_opcode = "SLL     ";
-   // 	     3'b010: disasm_opcode = "SLT     ";
-   // 	     3'b011: disasm_opcode = "SLTU    ";
-   // 	     3'b100: disasm_opcode = "XOR     ";
-   // 	     3'b101: disasm_opcode = funct7[5] 
-   // 					? "SRA     " : "SRL     ";
-   // 	     3'b110: disasm_opcode = "OR      ";
-   // 	     3'b111: disasm_opcode = "AND     ";
-   // 	     default: 	   disasm_opcode = "OP?     ";
-   // 	   endcase
-   // 	end
-   // 	`LUI:  disasm_opcode = "LUI     ";
-   // 	`BRANCH: begin
-   // 	   case (funct3)
-   // 	     3'b000: disasm_opcode = "BEQ     ";
-   // 	     3'b001: disasm_opcode = "BNE     ";
-   // 	     3'b100: disasm_opcode = "BLT     ";
-   // 	     3'b101: disasm_opcode = "BGE     ";
-   // 	     3'b110: disasm_opcode = "BLTU    ";
-   // 	     3'b111: disasm_opcode = "BGEU    ";
-   // 	     default: disasm_opcode = "BRANCH  ";
-   // 	   endcase
-   // 	end
-   // 	`JALR: disasm_opcode = "JALR    ";
-   // 	`JAL: disasm_opcode = "JAL     ";
-   // 	`SYSTEM: begin 
-   // 	   case (funct3)
-   // 	     3'b000: begin
-   // 		if (funct7==7'b0011000 &&
-   // 		    a_rs2 == 5'b00010 &&
-   // 		    a_rs1 == 5'b00000)
-   // 		  disasm_opcode = "MRET    ";
-   // 		else
-   // 		  disasm_opcode = "SYSTEM  ";
-   // 	     end
-   // 	     3'b001: disasm_opcode = "CSRRW   ";
-   // 	     3'b010: disasm_opcode = "CSRRS   ";
-   // 	     3'b011: disasm_opcode = "CSRRC   ";
-   // 	     3'b101: disasm_opcode = "CSRRWI  ";
-   // 	     3'b110: disasm_opcode = "CSRRSI  ";
-   // 	     3'b111: disasm_opcode = "CSRRCI  ";
-   // 	     default: disasm_opcode = "SYSTEM  ";
-   // 	   endcase
-   // 	end
-   // 	default: disasm_opcode = "ILLEGAL ";
-   //    endcase
-   // end
 endmodule // instruction_decoder

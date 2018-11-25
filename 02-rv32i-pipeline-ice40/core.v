@@ -24,7 +24,8 @@ module core
    // Top
    clk, resetb, boot,
    // MMU
-   dm_we, im_addr, im_do, dm_addr, dm_di, dm_do, dm_be, dm_is_signed,
+   dm_we, im_addr, im_do, dm_addr, dm_di, dm_do, dm_be, dm_is_signed, 
+   fence_i, fence_i_done,
    // IRQ
    irq_mtimecmp
    );
@@ -111,13 +112,17 @@ module core
    wire [31:0] CSR_mepc, CSR_mtvec;
    reg 	       XB_csr_writeback;
 
+   // FENCE.I instruction
+   output wire        fence_i;
+   input wire 	      fence_i_done;
+   
    assign dm_be = FD_bubble ? 4'b0 : FD_dm_be;
    assign dm_we = (FD_exception_store_misaligned | FD_bubble) ?
      1'b0 : FD_dm_we;
    assign dm_is_signed = FD_dm_is_signed;
 
    instruction_decoder inst_dec
-   (
+    (
      .FD_reset(FD_reset),
      .inst(im_do), .aluout_1_0(FD_aluout[1:0]),
      .immediate(FD_imm),
@@ -133,13 +138,14 @@ module core
      .csr_set(FD_csr_set), .csr_clear(FD_csr_clear), .csr_imm(FD_csr_imm),
      .a_rs1(FD_a_rs1), .a_rs2(FD_a_rs2), .a_rd(FD_a_rd), 
      .funct3(FD_funct3), .funct7(FD_funct7),
+     .fence_i(fence_i),
      .exception_illegal_instruction(FD_exception_illegal_instruction),
      .exception_ecall(FD_exception_ecall),
      .exception_ebreak(FD_exception_ebreak),
      .exception_load_misaligned(FD_exception_load_misaligned),
      .exception_store_misaligned(FD_exception_store_misaligned)
      //.disasm_opcode(FD_disasm_opcode)
-   );
+     );
 
    // Next PC for Branches
    // reg [31:0]  nextPC_br;
@@ -170,13 +176,13 @@ module core
       // Illegal Instruction Exception, Misaligned Exception, MRET,
       // Branch, Jump, Jump Register, Increment
       nextPC =
-	      (!boot) ? FD_PC
-	       : (FD_initiate_exception) ? CSR_mtvec
-	       : (FD_pc_update & FD_pc_mepc) ? CSR_mepc
-	       : (do_branch) ? FD_imm + FD_PC
-	       : (FD_jump) ? FD_PC + FD_imm
-	       : (FD_jr) ? {FD_aluout[31:1], 1'b0}
-	       : FD_PC + 32'd4;
+	      (!boot | (fence_i && !fence_i_done)) ? FD_PC
+	      : (FD_initiate_exception) ? CSR_mtvec
+	      : (FD_pc_update & FD_pc_mepc) ? CSR_mepc
+	      : (do_branch) ? FD_imm + FD_PC
+	      : (FD_jump) ? FD_PC + FD_imm
+	      : (FD_jr) ? {FD_aluout[31:1], 1'b0}
+	      : FD_PC + 32'd4;
       FD_exception_instruction_misaligned = nextPC[1:0] != 2'b00;
       
       im_addr = nextPC;
@@ -296,7 +302,7 @@ module core
 
    // Instruction is invalid on boot
    // Flush instructions on exception.
-   assign FD_bubble = !boot | FD_initiate_exception;
+   assign FD_bubble = !boot | (fence_i & !fence_i_done) | FD_initiate_exception;
    // The main pipeline
    always @ (posedge clk) begin : CORE_PIPELINE
       if (!resetb) begin
@@ -325,7 +331,7 @@ module core
          FD_reset <= 1'b1;
       end
       else if (clk) begin
-        FD_reset <= !boot;
+         FD_reset <= !boot;
 	 // XB stage
 	 //// Operators
 	 if (!FD_link) begin

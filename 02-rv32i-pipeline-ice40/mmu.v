@@ -24,12 +24,12 @@ module mmu(
            im_addr, im_do, dm_addr, dm_di, dm_do,
            is_signed,
            // To Memory
-	   ram0_addr, ram0_do,
+	   ram0_addr, ram0_di, ram0_do, ram0_we, 
 	   ram1_addr, ram1_di, ram1_do, ram1_we, dm_be,
            // TO IO
-           io_addr, io_en, io_we, io_data_read, io_data_write
+           io_addr, io_en, io_we, io_data_read, io_data_write,
 	   // FENCE.I
-	   // fence_i, fence_i_done
+	   fence_i, fence_i_done
            );
    
    parameter 
@@ -72,39 +72,42 @@ module mmu(
    // Address mapped to BRAM address
    output reg [15:2] ram0_addr, ram1_addr;
    // BRAM write enable
-   output reg 			    ram1_we;
+   output reg 			    ram0_we, ram1_we;
    // BRAM data output
    input wire [31:0] 		    ram0_do, ram1_do;
    // BRAM data input
-   output reg [31:0] 		    ram1_di;
+   output reg [31:0] 		    ram0_di, ram1_di;
    // FENCE.I command
-   // input wire 			    fence_i;
-   // output wire 			    fence_i_done;
+   input wire 			    fence_i;
+   output wire 			    fence_i_done;
    
    // Selected device
    /* verilator lint_off UNUSED */
-   integer 		    chosen_device_dm_tmp;
+   integer 			    chosen_device_dm_tmp;
    /* verilator lint_on UNUSED */
    // Selected device, pipelined
-   reg [2:0] 		    chosen_device_dm_p;
+   reg [2:0] 			    chosen_device_dm_p;
    // DM byte enable, pipelined
-   reg [3:0] 		    dm_be_p;
+   reg [3:0] 			    dm_be_p;
    // MMU signed/unsigned extend, pipelined
-   reg 			    is_signed_p;
+   reg 				    is_signed_p;
    // IM ports pipelined
    // reg [31:0] 		    im_data_1_p, im_data_2_p;
    // IO Read input, IO read input pipelined, IO write output
-   reg [31:0] 		    io_data_write_tmp;
+   reg [31:0] 			    io_data_write_tmp;
    // IO address
-   reg [7:0] 		    io_addr_tmp;
+   reg [7:0] 			    io_addr_tmp;
    // IO enable, IO write enable
-   reg 			    io_en_tmp, io_we_tmp;
+   reg 				    io_en_tmp, io_we_tmp;
 
    // In this implementaion, the IM ROM address is simply the 13:2 bits of IM address input
    //assign im_addr_out[13:2] = im_addr[13:2];
    // Second port uses DM addr
    //assign im_addr_out_2[13:2] = dm_addr[13:2];
 
+   reg [15:2] 			    fence_pointer;
+   reg 				    start_fence;
+   
    // The MMU pipeline
    always @ (posedge clk) begin : MMU_PIPELINE
       if (!resetb) begin
@@ -119,38 +122,36 @@ module mmu(
 	 io_en <= 1'b0;
 	 io_we <= 1'b0;
 	 io_addr <= 8'bX;
+	 fence_pointer <= 14'b0;
+	 start_fence <= 1'b0;
       end
       else if (clk) begin
-	 // Notice the pipeline. The naming is a bit inconsistent
-	 dm_be_p <= dm_be;
-	 chosen_device_dm_p <= chosen_device_dm_tmp[2:0];
-	 // chosen_device_im_p <= chosen_device_im_tmp[2:0];
-	 is_signed_p <= is_signed;
-	 //im_do <= im_data;
-	 //im_data_2_p <= im_data_2;
-	 io_data_write <= io_data_write_tmp;
-	 io_en <= io_en_tmp;
-	 io_we <= io_we_tmp;
-	 io_addr <= io_addr_tmp;
+	 if (!fence_i) begin
+	    // Notice the pipeline. The naming is a bit inconsistent
+	    dm_be_p <= dm_be;
+	    chosen_device_dm_p <= chosen_device_dm_tmp[2:0];
+	    // chosen_device_im_p <= chosen_device_im_tmp[2:0];
+	    is_signed_p <= is_signed;
+	    //im_do <= im_data;
+	    //im_data_2_p <= im_data_2;
+	    io_data_write <= io_data_write_tmp;
+	    io_en <= io_en_tmp;
+	    io_we <= io_we_tmp;
+	    io_addr <= io_addr_tmp;
+	    fence_pointer <= 14'b0;
+	    start_fence <= 1'b0;
+	 end // if (!fence_i)
+	 else begin
+	    start_fence <= 1'b1;
+	    fence_pointer <= fence_pointer + 14'b1;
+	 end
       end
    end // block: MMU_PIPELINE
 
-   assign ram0_addr = im_addr[15:2];
-   /* verilator lint_off UNUSED */
-   // reg [31:0] ram0_addr_temp;
-   /* verilator lint_on UNUSED */
-   // always @ (*) begin : IM_ADDR_MAP
-   //    ram0_addr_temp = im_addr;
-   //    //ram0_we = 1'b0;
-   //    ram0_addr = {(WORD_DEPTH_LOG-2){1'bX}};
-   //    if (im_addr[31:12] == 20'b0) begin
-   // 	 chosen_device_im_tmp = DEV_ROM;
-   //    end
-   //    else if (im_addr[31] == 1'b0 && im_addr[30:28] != 3'b0) begin
-   // 	 ram0_addr = ram0_addr_temp[2+:WORD_DEPTH_LOG-2];
-   // 	 chosen_device_im_tmp = DEV_RAM;
-   //    end
-   // end
+   assign ram0_di = ram1_do;
+   assign ram0_addr = (fence_i & start_fence) ? fence_pointer-14'b1 : im_addr[15:2];
+   assign fence_i_done = start_fence & fence_pointer == 14'b0;
+   assign ram0_we = fence_i & start_fence;
 
    /* verilator lint_off UNUSED */
    reg [31:0] 		    ram1_addr_temp, io_addr_temp;
@@ -174,9 +175,9 @@ module mmu(
       // end
       // else if (dm_addr[31] == 1'b0 && dm_addr[30:28] != 3'b0) begin
 	 // 0x10000000 - 0x7FFFFFFF
-	 ram1_addr = ram1_addr_temp[2+:WORD_DEPTH_LOG-2];
+	 ram1_addr = fence_i ? fence_pointer : ram1_addr_temp[2+:WORD_DEPTH_LOG-2];
 	 ram1_di = dm_di_shift;
-	 ram1_we = dm_we;
+	 ram1_we = fence_i ? 1'b0 : dm_we;
 	 chosen_device_dm_tmp = DEV_RAM;
       end
       else if (dm_addr[31:8] == 24'h800000) begin
