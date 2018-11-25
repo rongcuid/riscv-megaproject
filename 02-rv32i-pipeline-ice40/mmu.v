@@ -23,9 +23,9 @@ module mmu(
            clk, resetb, dm_we,
            im_addr, im_do, dm_addr, dm_di, dm_do,
            dm_be, is_signed,
-           // To Instruction Memory
-           // im_addr_out, im_data,
-           // im_addr_out_2, im_data_2,
+           // To Memory
+	   ram0_addr, ram0_do,
+	   ram1_addr, ram1_di, ram1_do, ram1_we, dm_be,
            // TO IO
            io_addr, io_en, io_we, io_data_read, io_data_write
            );
@@ -68,25 +68,25 @@ module mmu(
    // Shift bytes and half words to correct bank
    reg [31:0] 	      dm_di_shift;
    // Address mapped to BRAM address
-   reg [WORD_DEPTH_LOG-1:2] ram0_addr, ram1_addr;
+   output reg [15:2] ram0_addr, ram1_addr;
    // BRAM write enable
-   reg 			    ram1_we;
+   output reg 			    ram1_we;
    // BRAM data output
-   wire [31:0] 		    ram0_do, ram1_do;
+   input wire [31:0] 		    ram0_do, ram1_do;
    // BRAM data input
-   reg [31:0] 		    ram1_di;
+   output reg [31:0] 		    ram1_di;
    // Selected device
    /* verilator lint_off UNUSED */
-   integer 		    chosen_device_im_tmp, chosen_device_dm_tmp;
+   integer 		    chosen_device_dm_tmp;
    /* verilator lint_on UNUSED */
    // Selected device, pipelined
-   reg [2:0] 		    chosen_device_im_p, chosen_device_dm_p;
+   reg [2:0] 		    chosen_device_dm_p;
    // DM byte enable, pipelined
    reg [3:0] 		    dm_be_p;
    // MMU signed/unsigned extend, pipelined
    reg 			    is_signed_p;
    // IM ports pipelined
-   reg [31:0] 		    im_data_1_p, im_data_2_p;
+   // reg [31:0] 		    im_data_1_p, im_data_2_p;
    // IO Read input, IO read input pipelined, IO write output
    reg [31:0] 		    io_data_write_tmp;
    // IO address
@@ -99,42 +99,11 @@ module mmu(
    // Second port uses DM addr
    //assign im_addr_out_2[13:2] = dm_addr[13:2];
 
-   // BRAM bank in interleaved configuration
-   SPRAM_16Kx16 ram00 (
-                       .clk(clk), .wren(1'b0), 
-		       .maskwren(4'b0), 
-                       .addr(ram0_addr[WORD_DEPTH_LOG-1:2]),
-                       .din(16'bX), .dout(ram0_do[0+:16])
-                       );
-   SPRAM_16Kx16 ram01 (
-                       .clk(clk), .wren(1'b0), 
-		       .maskwren(4'b0), 
-                       .addr(ram0_addr[WORD_DEPTH_LOG-1:2]),
-                       .din(16'bX), .dout(ram0_do[16+:16])
-                       );
-   SPRAM_16Kx16 ram10 (
-                       .clk(clk), .wren(ram1_we), 
-		       .maskwren({{2{dm_be[1]}},{2{dm_be[0]}}}), 
-                       .addr(ram1_addr[WORD_DEPTH_LOG-1:2]),
-                       .din(ram1_di[0+:16]), .dout(ram1_do[0+:16])
-                       );
-   SPRAM_16Kx16 ram11 (
-                       .clk(clk), .wren(ram1_we), 
-		       .maskwren({{2{dm_be[3]}},{2{dm_be[2]}}}), 
-                       .addr(ram1_addr[WORD_DEPTH_LOG-1:2]),
-                       .din(ram1_di[16+:16]), .dout(ram1_do[16+:16])
-                       );
-
-   EBRAM_ROM rom0(
-     .clk(clk), .addra(im_addr[10:2]), .douta(im_data_1_p),
-     .addrb(dm_addr[10:2]), .doutb(im_data_2_p)
-   );
-
    // The MMU pipeline
    always @ (posedge clk) begin : MMU_PIPELINE
       if (!resetb) begin
 	 chosen_device_dm_p <= 3'bX;
-	 chosen_device_im_p <= DEV_ROM;
+	 //chosen_device_im_p <= DEV_ROM;
 	 is_signed_p <= 1'bX;
 	 dm_be_p <= 4'b0;
 	 // First instruction is initialized as NOP
@@ -149,7 +118,7 @@ module mmu(
 	 // Notice the pipeline. The naming is a bit inconsistent
 	 dm_be_p <= dm_be;
 	 chosen_device_dm_p <= chosen_device_dm_tmp[2:0];
-	 chosen_device_im_p <= chosen_device_im_tmp[2:0];
+	 // chosen_device_im_p <= chosen_device_im_tmp[2:0];
 	 is_signed_p <= is_signed;
 	 //im_do <= im_data;
 	 //im_data_2_p <= im_data_2;
@@ -160,21 +129,22 @@ module mmu(
       end
    end // block: MMU_PIPELINE
 
+   assign ram0_addr = im_addr[15:2];
    /* verilator lint_off UNUSED */
-   reg [31:0] ram0_addr_temp;
+   // reg [31:0] ram0_addr_temp;
    /* verilator lint_on UNUSED */
-   always @ (*) begin : IM_ADDR_MAP
-      ram0_addr_temp = im_addr - 32'h10000000;
-      //ram0_we = 1'b0;
-      ram0_addr = {(WORD_DEPTH_LOG-2){1'bX}};
-      if (im_addr[31:12] == 20'b0) begin
-	 chosen_device_im_tmp = DEV_ROM;
-      end
-      else if (im_addr[31] == 1'b0 && im_addr[30:28] != 3'b0) begin
-	 ram0_addr = ram0_addr_temp[2+:WORD_DEPTH_LOG-2];
-	 chosen_device_im_tmp = DEV_RAM;
-      end
-   end
+   // always @ (*) begin : IM_ADDR_MAP
+   //    ram0_addr_temp = im_addr;
+   //    //ram0_we = 1'b0;
+   //    ram0_addr = {(WORD_DEPTH_LOG-2){1'bX}};
+   //    if (im_addr[31:12] == 20'b0) begin
+   // 	 chosen_device_im_tmp = DEV_ROM;
+   //    end
+   //    else if (im_addr[31] == 1'b0 && im_addr[30:28] != 3'b0) begin
+   // 	 ram0_addr = ram0_addr_temp[2+:WORD_DEPTH_LOG-2];
+   // 	 chosen_device_im_tmp = DEV_RAM;
+   //    end
+   // end
 
    /* verilator lint_off UNUSED */
    reg [31:0] 		    ram1_addr_temp, io_addr_temp;
@@ -182,7 +152,7 @@ module mmu(
    // Device mapping from address
    // Note: X-Optimism might be a problem. Convert to Tertiary to fix
    always @ (*) begin : DM_ADDR_MAP
-      ram1_addr_temp = dm_addr - 32'h10000000;
+      ram1_addr_temp = dm_addr;
       io_addr_temp = dm_addr - 32'h80000000;
       io_addr_tmp = io_addr_temp[7:0];;
       io_en_tmp = 1'b0;
@@ -194,9 +164,9 @@ module mmu(
       chosen_device_dm_tmp = DEV_UNKN;
       if (dm_addr[31:12] == 20'b0) begin
 	 // 0x00000000 - 0x00000FFF
-	 chosen_device_dm_tmp = DEV_ROM;
-      end
-      else if (dm_addr[31] == 1'b0 && dm_addr[30:28] != 3'b0) begin
+	 //chosen_device_dm_tmp = DEV_ROM;
+      // end
+      // else if (dm_addr[31] == 1'b0 && dm_addr[30:28] != 3'b0) begin
 	 // 0x10000000 - 0x7FFFFFFF
 	 ram1_addr = ram1_addr_temp[2+:WORD_DEPTH_LOG-2];
 	 ram1_di = dm_di_shift;
@@ -242,18 +212,19 @@ module mmu(
    end // block: DM_IN_SHIFT
 
    always @ (*) begin : IM_OUT
-      case (chosen_device_im_p)
-	DEV_ROM: im_do = im_data_1_p;
-	DEV_RAM: im_do = ram0_do;
-	default: im_do = 32'bX;
-      endcase
+      im_do = ram0_do;
+      // case (chosen_device_im_p)
+      // 	DEV_ROM: im_do = im_data_1_p;
+      // 	DEV_RAM: im_do = ram0_do;
+      // 	default: im_do = 32'bX;
+      // endcase
    end
    // Shifting byte/halfword to correct output position
    // Note: X-Optimism might be a problem. Convert to Tertiary to fix
    always @ (*) begin : DM_OUT_SHIFT
       case (chosen_device_dm_p)
-        DEV_ROM:
-          dm_do_tmp = im_data_2_p;
+        // DEV_ROM:
+        //   dm_do_tmp = im_data_2_p;
    	DEV_RAM:
    	  dm_do_tmp = ram1_do;
    	DEV_IO:

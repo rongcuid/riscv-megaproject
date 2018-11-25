@@ -22,7 +22,7 @@
 module core
   (
    // Top
-   clk, resetb,
+   clk, resetb, boot,
    // MMU
    dm_we, im_addr, im_do, dm_addr, dm_di, dm_do, dm_be, dm_is_signed,
    // IRQ
@@ -30,7 +30,7 @@ module core
    );
 `include "core/aluop.vh"
 `include "core/exception_vector.vh"
-   input wire clk, resetb;
+   input wire clk, resetb, boot;
 
    // Interface to MMU
    input wire [31:0] im_do/*verilator public*/, dm_do;
@@ -169,7 +169,9 @@ module core
       //
       // Illegal Instruction Exception, Misaligned Exception, MRET,
       // Branch, Jump, Jump Register, Increment
-      nextPC = (FD_initiate_exception) ? CSR_mtvec
+      nextPC =
+	      (!boot) ? FD_PC
+	       : (FD_initiate_exception) ? CSR_mtvec
 	       : (FD_pc_update & FD_pc_mepc) ? CSR_mepc
 	       : (do_branch) ? FD_imm + FD_PC
 	       : (FD_jump) ? FD_PC + FD_imm
@@ -292,8 +294,9 @@ module core
    assign dm_addr = FD_aluout;
    assign dm_di = FD_d_rs2;
 
+   // Instruction is invalid on boot
    // Flush instructions on exception.
-   assign FD_bubble = FD_initiate_exception;
+   assign FD_bubble = !boot | FD_initiate_exception;
    // The main pipeline
    always @ (posedge clk) begin : CORE_PIPELINE
       if (!resetb) begin
@@ -322,7 +325,7 @@ module core
          FD_reset <= 1'b1;
       end
       else if (clk) begin
-        FD_reset <= 1'b0;
+        FD_reset <= !boot;
 	 // XB stage
 	 //// Operators
 	 if (!FD_link) begin

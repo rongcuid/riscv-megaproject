@@ -115,7 +115,7 @@ TEST_PROGRAMS+=tb_out/13-csr.bin
 TEST_PROGRAMS+=tb_out/14-mem.bin
 TEST_PROGRAMS+=tb_out/15-exception.bin
 
-compile_cpu_top_tb: cpu_top.v cpu_top_sc.cpp core_top.v EBRAM_ROM.v SPRAM_16Kx16.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v io_port.v
+compile_cpu_top_tb: cpu_top.v cpu_top_sc.cpp core_top.v EBRAM_SPROM.v SPRAM_16Kx16.v mmu.v regfile.v core/csr_ehu.v core/instruction_decoder.v core.v io_port.v
 	echo "(MM) Compiling CPU Top testbench"
 	verilator -Wall --top-module cpu_top --sc $^ --exe -o ../tb_out/cpu_top_tb
 	make -C obj_dir -f Vcpu_top.mk

@@ -10,8 +10,8 @@ test_failed:
 	j test_failed
 
 init_mem:
-	li x2, 0x10000000
-	li x1, 0x10000020
+	li x2, 0x00000100
+	li x1, 0x00000120
 clear_mem:	
 	sw x0, 0(x1)
 	addi x1, x1, -4

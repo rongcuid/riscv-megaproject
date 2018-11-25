@@ -9,9 +9,9 @@
 #include "Vcpu_top_core_top.h"
 #include "Vcpu_top_core_top.h"
 #include "Vcpu_top_core.h"
-#include "Vcpu_top_mmu.h"
+// #include "Vcpu_top_mmu.h"
 #include "Vcpu_top_regfile.h"
-#include "Vcpu_top_EBRAM_ROM.h"
+#include "Vcpu_top_EBRAM_SPROM.h"
 #include "disasm.h"
 
 //////////////////////////////////////////////////
@@ -41,7 +41,7 @@ public:
     dut->clk(clk_tb);
     dut->resetb(resetb_tb);
     dut->gpio0(gpio0_tb);
-    ROM = dut->cpu_top->CT0->MMU0->rom0->ROM;
+    ROM = dut->cpu_top->rom0->ROM;
     FD_PC = &(dut->cpu_top->CT0->CPU0->FD_PC);
     FD_inst = &(dut->cpu_top->CT0->CPU0->im_do);
     // FD_disasm_opcode = 
@@ -183,6 +183,7 @@ void cpu_top_tb_t::test0()
   }
   else {
     reset();
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<12; ++i) {
       view_snapshot_pc();
       wait();
@@ -205,6 +206,7 @@ void cpu_top_tb_t::test1()
   }
   else {
     reset();
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<20; ++i) {
       view_snapshot_int();
       wait();
@@ -228,6 +230,7 @@ void cpu_top_tb_t::test2()
   }
   else {
     reset();
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<24; ++i) {
       view_snapshot_int();
       wait();
@@ -248,6 +251,7 @@ void cpu_top_tb_t::test3()
   else {
     reset();
 
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<48; ++i) {
       view_snapshot_pc();
       wait();
@@ -270,6 +274,7 @@ void cpu_top_tb_t::test4()
   }
   else {
     reset();
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<16; ++i) {
       view_snapshot_hex();
       wait();
@@ -291,6 +296,7 @@ void cpu_top_tb_t::test5()
   }
   else {
     reset();
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<16; ++i) {
       view_snapshot_hex();
       wait();
@@ -312,6 +318,7 @@ void cpu_top_tb_t::test6()
   }
   else {
     reset();
+    while (!dut->cpu_top->boot) { wait(); }
     uint32_t prev_PC = 0;
     for (int i=0; i<96; ++i) {
       if (report_failure(0x10, prev_PC)) break;
@@ -334,6 +341,7 @@ void cpu_top_tb_t::test7()
   else {
     reset();
     uint32_t prev_PC = 0;
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<96; ++i) {
       //view_snapshot_int();
       if (report_failure(0x10, prev_PC)) break;
@@ -357,6 +365,7 @@ void cpu_top_tb_t::test8()
   else {
     reset();
     uint32_t prev_PC = 0;
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<96; ++i) {
       if (report_failure(0x10, prev_PC)) break;
       prev_PC = *FD_PC;
@@ -379,6 +388,7 @@ void cpu_top_tb_t::test9()
   else {
     reset();
     uint32_t prev_PC = 0;
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<96; ++i) {
       if (report_failure(0x10, prev_PC)) break;
       prev_PC = *FD_PC;
@@ -401,6 +411,7 @@ void cpu_top_tb_t::test10()
   else {
     reset();
     uint32_t prev_PC = 0;
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<96; ++i) {
       if (report_failure(0x10, prev_PC)) break;
       prev_PC = *FD_PC;
@@ -423,6 +434,7 @@ void cpu_top_tb_t::test11()
   else {
     reset();
     uint32_t prev_PC = 0;
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<96; ++i) {
       if (report_failure(0x10, prev_PC)) break;
       prev_PC = *FD_PC;
@@ -445,6 +457,7 @@ void cpu_top_tb_t::test12()
   else {
     reset();
     uint32_t prev_PC = 0;
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<96; ++i) {
       //view_snapshot_hex();
       if (report_failure(0x10, prev_PC)) break;
@@ -468,6 +481,7 @@ void cpu_top_tb_t::test13()
   else {
     reset();
     uint32_t prev_PC = 0;
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<48; ++i) {
       //view_snapshot_int();
       if (report_failure(0x10, prev_PC)) break;
@@ -491,6 +505,7 @@ void cpu_top_tb_t::test14()
   else {
     reset();
     uint32_t prev_PC = 0;
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<160; ++i) {
       //view_snapshot_hex();
       if (report_failure(0x10, prev_PC)) break;
@@ -514,6 +529,7 @@ void cpu_top_tb_t::test15()
   else {
     reset();
     uint32_t prev_PC = 0;
+    while (!dut->cpu_top->boot) { wait(); }
     for (int i=0; i<384; ++i) {
 //      view_snapshot_hex();
       if (report_failure(0x0C, prev_PC)) break;
