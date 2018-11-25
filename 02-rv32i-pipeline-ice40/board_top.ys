@@ -1,0 +1,1 @@
+synth_ice40 -top board_top -json board_top.json

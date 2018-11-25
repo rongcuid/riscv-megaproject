@@ -131,3 +131,7 @@ $RECYCLE.BIN/
 tb_log/
 tb_out/
 tmp/
+
+obj_dir/
+obj_*/
+*.log
