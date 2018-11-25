@@ -1,13 +1,1 @@
-# check design hierarchy
-#hierarchy
-
-## translate processes (always blocks)
-#proc; opt
-#
-## detect and optimize FSM encodings
-#fsm; opt
-#
-## implement memories (arrays)
-#memory; opt
-
 synth_ice40 -top board_top -json board_top.json

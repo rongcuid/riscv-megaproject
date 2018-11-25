@@ -136,7 +136,7 @@ compliance_clean:
 
 clean:
 	rm -rf tmp tb_out/* obj_dir
-	rm -f cpu_top.json
-	rm -f cpu_top.asc
-	rm -f cpu_top.blif
+	rm -f board_top.json
+	rm -f board_top.asc
+	rm -f board_top.blif
 	find . -name "*~" -exec rm -f {} \;
