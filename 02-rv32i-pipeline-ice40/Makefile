@@ -11,7 +11,7 @@ synthesis: board_top.json
 run_compliance: compile_cpu_run
 	cd riscv-compliance && make clean && make
 
-#COMPLIANCE_TEST=I-ENDIANESS-01
+COMPLIANCE_TEST=I-ENDIANESS-01
 #COMPLIANCE_TEST=I-ADD-01
 #COMPLIANCE_TEST=I-ADDI-01
 #COMPLIANCE_TEST=I-ANDI-01
@@ -30,7 +30,7 @@ run_compliance: compile_cpu_run
 #COMPLIANCE_TEST=I-CSRRWI-01
 #COMPLIANCE_TEST=I-DELAY_SLOTS-01
 #COMPLIANCE_TEST=I-EBREAK-01
-COMPLIANCE_TEST=I-ECALL-01
+#COMPLIANCE_TEST=I-ECALL-01
 #COMPLIANCE_TEST=I-FENCE.I-01# Fails
 #COMPLIANCE_TEST=I-IO
 #COMPLIANCE_TEST=I-JAL-01
@@ -128,7 +128,7 @@ compile_cpu_run: cpu_run_sc.cpp cpu_top.v core_top.v SPRAM_16Kx16.v EBRAM_ROM.v 
 run_cpu_top_tb: compile_cpu_top_tb $(TEST_PROGRAMS)
 	./tb_out/cpu_top_tb
 
-board_top.json: SPRAM_16Kx16_syn.v EBRAM_ROM.v core.v core_top.v cpu_top.v mmu.v regfile.v timer.v io_port.v core/csr_ehu.v core/instruction_decoder.v board_top.v board_top.ys
+board_top.json: SPRAM_16Kx16_syn.v EBRAM_SPROM.v core.v core_top.v cpu_top.v mmu.v regfile.v timer.v io_port.v core/csr_ehu.v core/instruction_decoder.v board_top.v board_top.ys
 	yosys $^ | tee synthesis.log
 
 compliance_clean:

@@ -11,9 +11,8 @@
 #include "Vcpu_top_core_top.h"
 #include "Vcpu_top_core_top.h"
 #include "Vcpu_top_core.h"
-#include "Vcpu_top_mmu.h"
 #include "Vcpu_top_regfile.h"
-#include "Vcpu_top_EBRAM_ROM.h"
+#include "Vcpu_top_EBRAM_SPROM.h"
 #include "Vcpu_top_SPRAM_16Kx16.h"
 
 #include "disasm.h"
@@ -49,7 +48,7 @@ public:
     dut->clk(clk_tb);
     dut->resetb(resetb_tb);
     dut->gpio0(gpio0_tb);
-    ROM = dut->cpu_top->CT0->MMU0->rom0->ROM;
+    ROM = dut->cpu_top->rom0->ROM;
     FD_PC = &(dut->cpu_top->CT0->CPU0->FD_PC);
     FD_inst = &(dut->cpu_top->CT0->CPU0->im_do);
     // FD_disasm_opcode = 
@@ -73,22 +72,22 @@ public:
   uint32_t get_memory_word(uint32_t i) 
   {
     uint32_t word = 0;
-    word |= dut->cpu_top->CT0->MMU0->ram10->RAM[i];
-    word |= dut->cpu_top->CT0->MMU0->ram11->RAM[i] << 16;
+    word |= dut->cpu_top->ram10->RAM[i];
+    word |= dut->cpu_top->ram11->RAM[i] << 16;
     return word;
   }
 
   void initialize_memory() 
   {
     for (int i=0; i<1024; ++i) {
-      dut->cpu_top->CT0->MMU0->ram00->RAM[i] = 0xAAAA;
-      dut->cpu_top->CT0->MMU0->ram01->RAM[i] = 0xAAAA;
-      dut->cpu_top->CT0->MMU0->ram10->RAM[i] = 0xAAAA;
-      dut->cpu_top->CT0->MMU0->ram11->RAM[i] = 0xAAAA;
+      dut->cpu_top->ram00->RAM[i] = 0xAAAA;
+      dut->cpu_top->ram01->RAM[i] = 0xAAAA;
+      dut->cpu_top->ram10->RAM[i] = 0xAAAA;
+      dut->cpu_top->ram11->RAM[i] = 0xAAAA;
     }
   }
   void dump_memory();
-  void scan_memory_for_base_address();
+  bool scan_memory_for_base_address();
 
   void view_snapshot_pc()
   {
@@ -173,9 +172,15 @@ void cpu_run_t::poll_io()
     if (en && we) {
       // IO domain address is 0x0
       if (addr8 == 0) {
-        switch (dut->cpu_top->IO0->io_data_write) {
+	uint32_t cmd = dut->cpu_top->IO0->io_data_write;
+	std::cout << "(TT) TB command received: 0x"
+		  << std::hex << cmd << std::endl;
+        switch (cmd) {
 	case 0:
-	  scan_memory_for_base_address();
+	  if (!scan_memory_for_base_address()) {
+	    std::cerr << "Testbench Data section not found!" << std::endl;
+	    exit (1);
+	  }
 	  break;
 	case 1:
 	  test_passes = true;
@@ -214,10 +219,11 @@ std::string reverse(const sc_bv<256>& bv)
   return op;
 }
 
-void cpu_run_t::scan_memory_for_base_address()
+bool cpu_run_t::scan_memory_for_base_address()
 {
   bool tail = false;
-  for (int i=1023; i>=0; --i) {
+  std::cout << "(TT) base addr: 0x";
+  for (int i=16383; i>=0; --i) {
     uint32_t word = get_memory_word(i);
     if (!tail) {
       if (word == 0xDEADDEAD) tail = true;
@@ -225,10 +231,13 @@ void cpu_run_t::scan_memory_for_base_address()
     else {
       if (word != 0xFFFFFFFF) {
         test_result_base_addr = (i+1) << 2;
-        return;
+	std::cout << std::hex << test_result_base_addr << std::endl;
+        return true;
       }
     }
   }
+  std::cout << "NOT FOUND!" << std::endl;
+  return false;
 }
 
 void cpu_run_t::dump_memory()
@@ -239,7 +248,7 @@ void cpu_run_t::dump_memory()
   ofstream f("mem.log");
   int i = test_result_base_addr >> 2;
   assert(i < 1024);
-  for (; i<1024; ++i) {
+  for (; i<16384; ++i) {
     uint32_t word = get_memory_word(i);
     if (f.is_open()) {
       f << std::setfill('0') << std::setw(8) 
@@ -267,6 +276,7 @@ void cpu_run_t::test_thread()
     exit(1);
   }
   reset();
+  while (!dut->cpu_top->boot) { wait(); }
   for (int i=0; i<4096; ++i) {
     poll_io();
     view_snapshot_hex();

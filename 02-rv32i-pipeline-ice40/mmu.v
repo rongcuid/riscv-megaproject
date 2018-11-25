@@ -22,12 +22,14 @@
 module mmu(
            clk, resetb, dm_we,
            im_addr, im_do, dm_addr, dm_di, dm_do,
-           dm_be, is_signed,
+           is_signed,
            // To Memory
 	   ram0_addr, ram0_do,
 	   ram1_addr, ram1_di, ram1_do, ram1_we, dm_be,
            // TO IO
            io_addr, io_en, io_we, io_data_read, io_data_write
+	   // FENCE.I
+	   // fence_i, fence_i_done
            );
    
    parameter 
@@ -75,6 +77,10 @@ module mmu(
    input wire [31:0] 		    ram0_do, ram1_do;
    // BRAM data input
    output reg [31:0] 		    ram1_di;
+   // FENCE.I command
+   // input wire 			    fence_i;
+   // output wire 			    fence_i_done;
+   
    // Selected device
    /* verilator lint_off UNUSED */
    integer 		    chosen_device_dm_tmp;
