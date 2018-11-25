@@ -1,12 +1,68 @@
+# TL;DR
+
+The contest objective has failed: I could not fit the CPU into the FPGA. However,
+riscv-compliance tests pass for all except `FENCE.I`, which is optional.
+
 # Introduction
 
 A RISCV RV32I softcore, with all essential instructions, memory mapped IO port, and precise exception.
 
+# Run the tests
+
+First, prerequisites must be installed. I used Ubuntu 18.04 LTS to develop:
+
+```
+$ apt-get install build-essential verilator cmake
+```
+
+Then, SystemC 2.3.3 must be installed, and environmental variable `SYSTEMC_INCLUDE`
+and `SYSTEMC_LIBDIR` need to be set properly for verilator to work.
+
+Next, the Zephyr RISCV32 toolchain needs to be installed, and environment
+variable `RISCV_PREFIX` need to be set:
+
+```
+export RISCV_PREFIX="riscv32-zephyr-elf-"
+```
+
+Or, if you prefer absolute path, this is one example:
+
+```
+export RISCV_PREFIX=/opt/zephyr-sdk/sysroots/x86_64-pokysdk-linux/usr/bin/riscv32-zephyr-
+```
+
+Clone the repo. Then in the repo, clone the riscv-compliance submodule:
+
+
+```
+$ git submodule update --init -- 02-rv32i-pipeline-ice40/riscv-compliance
+```
+
+Then change to this subdirectory
+
+```
+$ cd 02-rv32i-pipeline-ice40
+```
+
+To run the riscv-compliance test, run:
+
+```
+$ make
+```
+
+Subarch tests are used to test incomplete CPU implementation. Each test
+depends only on instructions tested by previous tests.
+To run subarch test, run:
+
+```
+$ make run_cpu_top_tb
+
+```
+
 # Architecture
 
 RISC-V RV32I two stage pipeline, early branch, CSR and exception in XB
-stage. All essential instructions are implemented, with various SYSTEM
-instructions such as ECALL implemented as software trap. Certain CSR
+stage. All essential instructions are implemented, except `FENCE.I`. Certain CSR
 registers such as performance counters are not implemented.
 
 # Interrupts
@@ -23,7 +79,7 @@ Instruction/Memory Address Misaligned Exception, ECALL, and EBREAK
 
 - Reset: 0x00000000
 
-- Exception vector: 0x00000004, can be changed by writing mtvec
+- Trap vector: 0x00000004, can be changed by writing mtvec
 
 # I/O
 
